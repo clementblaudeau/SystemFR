@@ -85,6 +85,19 @@ Inductive tree: Set :=
   | trefl: tree -> tree -> tree
 .
 
+(* Decidable equality for trees *)
+Definition fv_tag_dec : forall (x y : fv_tag), {x = y} + {x <> y}.
+Proof.
+  intros.
+  decide equality.
+  Qed.
+Definition tree_eq_dec : forall (x y : tree), {x = y} + {x <> y}.
+Proof.
+  repeat decide equality || apply fv_tag_dec.
+Qed.
+Definition tree_eq t1 t2 : bool := if (tree_eq_dec t1 t2) then true else false.
+
+
 (* types defined in terms out of the previous types *)
 Definition intersect T0 Ts := T_forall T_nat (T_rec (lvar 0 term_var) T0 Ts).
 

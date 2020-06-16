@@ -7,77 +7,28 @@ Import Coq.Strings.String.
 Import Coq.Lists.List.
 Require Import Psatz.
 
+
+
+Create HintDb deriv.
+Hint Resolve annotated_reducible_true : deriv.
+Hint Resolve annotated_reducible_false: deriv.
+Hint Resolve annotated_reducible_zero: deriv.
+Hint Resolve annotated_reducible_succ: deriv.
+
+(* Judgments *)
 Inductive Judgment_name :=
 | InferNat
-| InferBool
-.
+| InferBool .
 
 Inductive Judgment:=
 | InferJudgment(name: Judgment_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment.
 
+Definition is_true (j: Judgment) : Prop := match j with | InferJudgment _ Θ Γ t T => [[ Θ; Γ ⊨ t : T ]] end.
+
+(* Derivation trees *)
 Inductive NodeTree (T:Type) :=
 | N(n: T)(children: list (NodeTree T)): NodeTree T.
-
-Check NodeTree_ind.
-
-(*
-Fixpoint NodeTree_size {T:Type} nT :=
-  match nT with
-    | N n c => 1 +  *)
-
 Arguments N {T}.
-
-Definition derivation := NodeTree Judgment.
-
-Definition is_true (j: Judgment) : Prop :=
-  match j with
-  | InferJudgment _ Θ Γ t T => [[ Θ; Γ ⊨ t : T ]]
-  end.
-
-
-(* Decidable equality for trees *)
-Definition fv_tag_dec : forall (x y : fv_tag), {x = y} + {x <> y}.
-Proof.
-  intros.
-  decide equality.
-  Qed.
-Definition tree_eq_dec : forall (x y : tree), {x = y} + {x <> y}.
-Proof.
-  repeat decide equality || apply fv_tag_dec.
-Qed.
-Definition tree_eq t1 t2 : bool := if (tree_eq_dec t1 t2) then true else false.
-
-(* Decidable equality for contexts *)
-Definition context_eq_dec: forall (x y : context), {x = y} + {x <> y}.
-Proof.
-  repeat decide equality || apply tree_eq_dec.
-Qed.
-Definition context_eq c1 c2 : bool := if (context_eq_dec c1 c2) then true else false.
-Definition list_nat_eq_dec : forall (x y : list nat), {x = y} + {x <> y}.
-Proof.
-  repeat decide equality.
-Qed.
-
-(* Decidable equality for Judgments *)
-Definition Judgment_eq_dec : forall (x y : Judgment), {x = y} + {x <> y}.
-Proof.
-  repeat decide equality. Qed.
-Definition Judgment_eq j1 j2 : bool := if (Judgment_eq_dec j1 j2) then true else false.
-
-
-
-Fixpoint is_valid(dv: derivation) : bool :=
-  match dv with
-  (* | N (InferJudgment "InferUnit" _ _ uu T_unit) nil => true *)
-  | N (InferJudgment InferBool _ _ ttrue T_bool) nil => true
-  | N (InferJudgment InferBool _ _ tfalse T_bool) nil => true
-  | N (InferJudgment InferNat _ _ zero T_nat) nil => true
-  | N (InferJudgment InferNat Θ Γ (succ t) T_nat) (dv'::nil) =>
-    match dv' with
-    | N j' _ => andb (Judgment_eq j' (InferJudgment InferNat Θ Γ t T_nat)) (is_valid dv')
-    end
-  | _ => false
-  end.
 
 Definition root {T} nt : T :=
   match nt with
@@ -88,14 +39,9 @@ Definition children {T} nt : (list (NodeTree T)) :=
   | N _ c => c
   end.
 
+Definition derivation := NodeTree Judgment.
 
-Check @root.
-
-Create HintDb deriv.
-Hint Resolve annotated_reducible_true : deriv.
-Hint Resolve annotated_reducible_false: deriv.
-Hint Resolve annotated_reducible_zero: deriv.
-Hint Resolve annotated_reducible_succ: deriv.
+(* Induction on derivations *)
 
 Fixpoint derivation_size (dv: derivation) : nat :=
   match dv with
@@ -127,6 +73,54 @@ Definition derivation_ind :
 Proof.
   intros.
   apply (derivation_ind_aux (S (derivation_size dv))); eauto. Qed.
+
+
+
+(* Decidable equality for contexts *)
+Definition context_eq_dec: forall (x y : context), {x = y} + {x <> y}.
+Proof.
+  repeat decide equality || apply tree_eq_dec.
+Qed.
+Definition context_eq c1 c2 : bool := if (context_eq_dec c1 c2) then true else false.
+Definition list_nat_eq_dec : forall (x y : list nat), {x = y} + {x <> y}.
+Proof.
+  repeat decide equality.
+Qed.
+(* Decidable equality for Judgments *)
+Definition Judgment_eq_dec : forall (x y : Judgment), {x = y} + {x <> y}.
+Proof.
+  repeat decide equality. Qed.
+Definition Judgment_eq j1 j2 : bool := if (Judgment_eq_dec j1 j2) then true else false.
+Notation "j1 ?= j2" := (Judgment_eq j1 j2) (at level 70, j2 at next level).
+
+Lemma Judgment_eq_prop : forall j1 j2, (j1 ?= j2 = true) -> j1 = j2.
+Proof.
+  unfold Judgment_eq.
+  steps.
+Qed.
+Hint Resolve Judgment_eq_prop: deriv
+
+Check @root.
+
+
+
+
+
+
+Fixpoint is_valid(dv: derivation) : bool :=
+  match dv with
+  (* | N (InferJudgment "InferUnit" _ _ uu T_unit) nil => true *)
+  | N (InferJudgment InferBool _ _ ttrue T_bool) nil => true
+  | N (InferJudgment InferBool _ _ tfalse T_bool) nil => true
+  | N (InferJudgment InferNat _ _ zero T_nat) nil => true
+  | N (InferJudgment InferNat Θ Γ (succ t) T_nat) (dv'::nil) =>
+    match dv' with
+    | N j _ => andb (j ?= (InferJudgment InferNat Θ Γ t T_nat)) (is_valid dv')
+    end
+  | _ => false
+  end.
+
+
 
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
 Proof.

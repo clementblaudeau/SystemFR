@@ -15,6 +15,7 @@ Hint Resolve annotated_reducible_true : deriv.
 Hint Resolve annotated_reducible_false: deriv.
 Hint Resolve annotated_reducible_zero: deriv.
 Hint Resolve annotated_reducible_succ: deriv.
+Hint Resolve annotated_reducible_T_ite: deriv.
 Hint Rewrite tree_eq_prop: deriv.
 
 (* Judgments *)
@@ -184,7 +185,7 @@ Fixpoint is_valid(dv: derivation) : bool :=
   | _ => false
   end.
 
-Lemma subset_context_support: forall Γ, subset (fv_context Γ) (fv_context Γ).
+Lemma subset_context_support: forall Γ, subset (support Γ) (fv_context Γ).
 Proof.
   intros Γ x.
   eauto using fv_context_support.
@@ -219,28 +220,23 @@ Ltac lighter :=
   (cbn in *)
    .
 
+
+(* Conservation lemmas *)
 Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_tree (root dv)) 0 /\ wf (J_type (root dv)) 0.
 Proof.
   induction dv using derivation_ind.
-  intros.
-  unfold root, J_tree, J_type.
-  unfold forallP in X.
-
-  unfold is_valid in H.
-
+  intros. unfold root, J_tree, J_type. unfold forallP in X. unfold is_valid in H.
   repeat subst || bools || destruct_and || autorewrite with deriv in * || inst_list_prop || invert_constructor_equalities || (destruct_match; repeat fold is_valid in * ; try solve [congruence]) || eauto with cbn wf || intuition auto || simpl.
 Qed.
 
 Lemma is_valid_wf_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf t 0.
 Proof.
-  intros.
-  pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ). steps.
+  intros; pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ); steps.
 Qed.
 
 Lemma is_valid_wf_T : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf T 0.
 Proof.
-  intros.
-  pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ). steps.
+  intros; pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ); steps.
 Qed.
 
 
@@ -268,12 +264,28 @@ Qed.
 Hint Resolve is_valid_support_T: deriv.
 
 
-(* Lemma is_valid_wf_context : forall n Θ Γ t T,  is_valid (J n Θ Γ t T) = true ->
-  *)
 Hint Resolve is_valid_wf_t: deriv.
 Hint Resolve is_valid_wf_T: deriv.
-Hint Resolve annotated_reducible_T_ite: deriv.
 
+Ltac consume_is_valid :=
+  match goal with
+  | H: is_valid (N (J ?n ?Θ ?Γ ?t ?T) ?c) = true |- _ =>
+    epose proof (is_valid_wf_t n Θ Γ t T c H) ;
+    epose proof (is_valid_wf_T n Θ Γ t T c H) ;
+    epose proof (is_valid_support_t n Θ Γ t T c H) ;
+    epose proof (is_valid_support_T n Θ Γ t T c H) ; clear H
+  end.
+
+Lemma in_subset_not:
+  forall {T} (l1 l2: list T) (x: T),
+    subset l1 l2 -> not (x ∈ l2) -> not (x ∈ l1).
+Proof.
+  steps.
+Qed.
+Hint Resolve in_subset_not: sets.
+
+
+(* Main soundess result *)
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
 Proof.
   induction dv using derivation_ind.
@@ -282,32 +294,4 @@ Proof.
   unfold is_true. simpl.
   destruct J0 eqn:HJ.
   unfold is_valid in H.
-  repeat subst || bools || destruct_and || autorewrite with deriv in * || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || inst_list_prop || intuition auto || eauto with deriv || cbn.
-  apply (annotated_reducible_T_ite _ _ _ _ _ _ _ n); eauto 4 with deriv sets.
-  (* 6 *)
-  pose proof (subset_context_support Γ).
-  pose proof (is_valid_support_t  CheckBool Θ Γ t0_1 T_bool nil H11).
-  intros H2000.
-  apply H1.
-  apply (in_subset (fv t0_1) _ _).
-  eauto with sets deriv cbn.
-  intros x.
-  pose proof (fv_context_support Γ x term_var). eauto with sets.
-  eauto with sets.
-  (* 4 *)
-  pose proof (is_valid_support_t _ _ _ _ _ _ H9).
-  simpl in H7.
-  eauto with deriv sets cbn.
-  (* 3 *)
-  pose proof (is_valid_support_t _ _ _ _ _ _ H7).
-  simpl in H7.
-  eauto with deriv sets cbn.
-  (* 2 *)
-  pose proof (is_valid_support_T _ _ _ _ _ _ H9).
-  simpl in H7.
-  eauto with deriv sets cbn.
-  (* 3 *)
-  pose proof (is_valid_support_T _ _ _ _ _ _ H7).
-  simpl in H7.
-  eauto with deriv sets cbn.
-Qed.
+  repeat subst || bools || destruct_and || autorewrite with deriv in * || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || inst_list_prop || intuition auto || eauto with deriv || cbn || consume_is_valid || cbn in * || eauto with deriv cbn sets.  Qed.

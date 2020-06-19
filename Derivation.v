@@ -31,6 +31,8 @@ Definition J_tree dv :=
   match dv with | J _ _ _ t _ => t end.
 Definition J_type dv :=
   match dv with | J _ _ _ _ T => T end.
+Definition J_context dv :=
+  match dv with | J _ _ Γ _ _ => Γ end.
 
 Definition is_true (j: Judgment) : Prop := match j with | J _ Θ Γ t T => [[ Θ; Γ ⊨ t : T ]] end.
 
@@ -58,6 +60,7 @@ Fixpoint derivation_size (dv: derivation) : nat :=
   end.
 
 Definition forallP {T} P (l: list T) := forall (k: T), k ∈ l -> P k.
+Hint Unfold forallP: deriv.
 
 Definition derivation_ind_aux :
   forall n dv P,
@@ -81,7 +84,8 @@ Definition derivation_ind :
     P dv.
 Proof.
   intros.
-  apply (derivation_ind_aux (S (derivation_size dv))); eauto. Qed.
+  apply (derivation_ind_aux (S (derivation_size dv))); eauto.
+Qed.
 
 
 
@@ -111,6 +115,41 @@ Qed.
 (* apply_anywhere Judgment_eq_prop. *)
 Hint Rewrite Judgment_eq_prop: deriv.
 
+Definition Inb x l : bool := if (in_dec PeanoNat.Nat.eq_dec x l) then true else false.
+Notation "x ?∈ l" := (Inb x l) (at level 70, l at next level).
+Notation "x ?∉ l" := (negb (Inb x l)) (at level 70, l at next level).
+Lemma Inb_prop : forall x A, (x ?∈ A = true) <-> (x ∈ A).
+Proof.
+  intros.
+  unfold Inb, forallb.
+  steps.
+Qed.
+Lemma Inb_prop2 : forall x A, (x ?∉ A = true) <-> not(x ∈ A).
+Proof.
+  intros.
+  unfold Inb, forallb.
+  steps.
+Qed.
+Lemma Inb_prop3 : forall x A, (x ?∈ A = false) <-> not(x ∈ A).
+Proof.
+  intros.
+  unfold Inb, forallb.
+  steps.
+Qed.
+Hint Rewrite Inb_prop: deriv.
+Hint Rewrite Inb_prop2: deriv.
+Hint Rewrite Inb_prop3: deriv.
+
+
+Definition subsetb l1 l2 : bool := forallb (fun x => Inb x l2 ) l1.
+Notation "a ?⊂ b" := (subsetb a b) (at level 70, b at next level).
+Lemma subsetb_prop : forall l1 l2, (l1 ?⊂ l2 = true) <-> (subset l1 l2).
+Proof.
+  intros.
+  unfold subsetb, Inb, subset, forallb.
+  induction l1;  steps.
+Qed.
+Hint Rewrite subsetb_prop: deriv.
 
 Fixpoint is_valid(dv: derivation) : bool :=
   match dv with
@@ -135,21 +174,22 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (j1 ?= (J I1 Θ ((x, T_equiv b ttrue)::Γ) t1 T1)) && (is_valid d1)
     && (j2 ?= (J I2 Θ ((x, T_equiv b tfalse)::Γ) t2 T2)) && (is_valid d2)
     && tree_eq T (T_ite b T1 T2)
-
+    && (x ?∉ (fv t1))
+    && (x ?∉ (fv t2))
+    && (x ?∉ (fv T1))
+    && (x ?∉ (fv T2))
+    && (x ?∉ (fv_context Γ))
+    && ( x ?∉ Θ )
 
   | _ => false
   end.
 
-Definition Inb x l : bool := if (in_dec PeanoNat.Nat.eq_dec x l) then true else false.
-Notation "x ?∈ l" := (Inb x l) (at level 70, l at next level).
-Definition subsetb l1 l2 : bool := forallb (fun x => Inb x l2 ) l1.
-Notation "a ?⊂ b" := (subsetb a b) (at level 70, b at next level).
-Lemma subsetb_prop : forall l1 l2, (l1 ?⊂ l2 = true) <-> (subset l1 l2).
+Lemma subset_context_support: forall Γ, subset (fv_context Γ) (fv_context Γ).
 Proof.
-  intros.
-  unfold subsetb, Inb, subset, forallb.
-  induction l1;  steps.
+  intros Γ x.
+  eauto using fv_context_support.
 Qed.
+Hint Resolve subset_context_support: deriv.
 
 
 Fixpoint check_fv_context (Θ:list nat) Γ : bool :=
@@ -188,7 +228,7 @@ Proof.
 
   unfold is_valid in H.
 
-  repeat subst || bools || destruct_and || rewrite Judgment_eq_prop in * || rewrite tree_eq_prop in * || inst_list_prop || invert_constructor_equalities || fold is_valid in * ||  (destruct_match; repeat fold is_valid in * ; try solve [congruence]) || eauto with cbn wf || intuition auto || simpl.
+  repeat subst || bools || destruct_and || autorewrite with deriv in * || inst_list_prop || invert_constructor_equalities || (destruct_match; repeat fold is_valid in * ; try solve [congruence]) || eauto with cbn wf || intuition auto || simpl.
 Qed.
 
 Lemma is_valid_wf_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf t 0.
@@ -203,13 +243,37 @@ Proof.
   pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ). steps.
 Qed.
 
-(*
-Lemma is_valid_support_term : forall n Θ Γ t T, is_valid (J n Θ Γ t T) = true -> subset (fv t) (support Γ)
-Lemma is_valid_wf_context : forall n Θ Γ t T,  is_valid (J n Θ Γ t T) = true ->
+
+Lemma is_valid_support_term_aux : forall dv, is_valid dv = true -> subset (fv (J_tree (root dv)) ) (support (J_context (root dv))) /\ subset (fv (J_type (root dv)) ) (support (J_context (root dv))).
+Proof.
+  unfold fv.
+  induction dv using derivation_ind.
+  intros.
+  unfold root, J_tree, J_type.
+  unfold forallP in X.
+  unfold is_valid in H.
+  repeat subst || bools || destruct_and || autorewrite with deriv in * || inst_list_prop || invert_constructor_equalities || fold is_valid in * ||  (destruct_match; repeat fold is_valid in * ; try solve [congruence]) || intuition auto || simpl  || eauto with cbn sets.
+Qed.
+Lemma is_valid_support_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> subset (fv t) (support Γ).
+Proof.
+  intros.
+  pose proof (is_valid_support_term_aux  (N (J n Θ Γ t T) c) H ). steps.
+Qed.
+Hint Resolve is_valid_support_t: deriv.
+Lemma is_valid_support_T : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> subset (fv T) (support Γ).
+Proof.
+  intros.
+  pose proof (is_valid_support_term_aux  (N (J n Θ Γ t T) c) H ). steps.
+Qed.
+Hint Resolve is_valid_support_T: deriv.
+
+
+(* Lemma is_valid_wf_context : forall n Θ Γ t T,  is_valid (J n Θ Γ t T) = true ->
   *)
 Hint Resolve is_valid_wf_t: deriv.
 Hint Resolve is_valid_wf_T: deriv.
-Hint Rewrite Judgment_eq_prop: deriv.
+Hint Resolve annotated_reducible_T_ite: deriv.
+
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
 Proof.
   induction dv using derivation_ind.
@@ -218,22 +282,32 @@ Proof.
   unfold is_true. simpl.
   destruct J0 eqn:HJ.
   unfold is_valid in H.
-  repeat subst || bools || destruct_and || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || rewrite Judgment_eq_prop in * || rewrite tree_eq_prop in * || inst_list_prop || intuition auto || eauto with deriv cbn.
-                                         eapply annotated_reducible_T_ite; eauto with deriv.
-                                         admit.
-                                         admit.
-                                         admit.
-                                         admit.
-                                         admit.
-                                         admit.
-                                         admit.
-                                         admit.
-                                         admit.
-                                         admit.
-                                         admit.
-                                         admit.
-                                         simpl in H.
-                                         eauto.
-                                         simpl in H0.
-                                         eauto.
+  repeat subst || bools || destruct_and || autorewrite with deriv in * || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || inst_list_prop || intuition auto || eauto with deriv || cbn.
+  apply (annotated_reducible_T_ite _ _ _ _ _ _ _ n); eauto 4 with deriv sets.
+  (* 6 *)
+  pose proof (subset_context_support Γ).
+  pose proof (is_valid_support_t  CheckBool Θ Γ t0_1 T_bool nil H11).
+  intros H2000.
+  apply H1.
+  apply (in_subset (fv t0_1) _ _).
+  eauto with sets deriv cbn.
+  intros x.
+  pose proof (fv_context_support Γ x term_var). eauto with sets.
+  eauto with sets.
+  (* 4 *)
+  pose proof (is_valid_support_t _ _ _ _ _ _ H9).
+  simpl in H7.
+  eauto with deriv sets cbn.
+  (* 3 *)
+  pose proof (is_valid_support_t _ _ _ _ _ _ H7).
+  simpl in H7.
+  eauto with deriv sets cbn.
+  (* 2 *)
+  pose proof (is_valid_support_T _ _ _ _ _ _ H9).
+  simpl in H7.
+  eauto with deriv sets cbn.
+  (* 3 *)
+  pose proof (is_valid_support_T _ _ _ _ _ _ H7).
+  simpl in H7.
+  eauto with deriv sets cbn.
 Qed.

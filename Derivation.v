@@ -2,11 +2,12 @@ Require Export SystemFR.Judgments.
 Require Export SystemFR.AnnotatedTactics.
 Require Export SystemFR.AnnotatedBool.
 Require Export SystemFR.AnnotatedNat.
+Require Export SystemFR.AnnotatedIte.
 
 Import Coq.Strings.String.
 Import Coq.Lists.List.
+Import Coq.Bool.Bool.
 Require Import Psatz.
-
 
 
 Create HintDb deriv.
@@ -14,16 +15,24 @@ Hint Resolve annotated_reducible_true : deriv.
 Hint Resolve annotated_reducible_false: deriv.
 Hint Resolve annotated_reducible_zero: deriv.
 Hint Resolve annotated_reducible_succ: deriv.
+Hint Rewrite tree_eq_prop: deriv.
 
 (* Judgments *)
 Inductive Judgment_name :=
 | InferNat
-| InferBool .
+| InferBool
+| CheckBool
+| InferIf.
 
 Inductive Judgment:=
-| InferJudgment(name: Judgment_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment.
+| J(name: Judgment_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment.
 
-Definition is_true (j: Judgment) : Prop := match j with | InferJudgment _ Θ Γ t T => [[ Θ; Γ ⊨ t : T ]] end.
+Definition J_tree dv :=
+  match dv with | J _ _ _ t _ => t end.
+Definition J_type dv :=
+  match dv with | J _ _ _ _ T => T end.
+
+Definition is_true (j: Judgment) : Prop := match j with | J _ Θ Γ t T => [[ Θ; Γ ⊨ t : T ]] end.
 
 (* Derivation trees *)
 Inductive NodeTree (T:Type) :=
@@ -86,6 +95,7 @@ Definition list_nat_eq_dec : forall (x y : list nat), {x = y} + {x <> y}.
 Proof.
   repeat decide equality.
 Qed.
+
 (* Decidable equality for Judgments *)
 Definition Judgment_eq_dec : forall (x y : Judgment), {x = y} + {x <> y}.
 Proof.
@@ -93,66 +103,137 @@ Proof.
 Definition Judgment_eq j1 j2 : bool := if (Judgment_eq_dec j1 j2) then true else false.
 Notation "j1 ?= j2" := (Judgment_eq j1 j2) (at level 70, j2 at next level).
 
-Lemma Judgment_eq_prop : forall j1 j2, (j1 ?= j2 = true) -> j1 = j2.
+Lemma Judgment_eq_prop : forall j1 j2, (j1 ?= j2 = true) <-> j1 = j2.
 Proof.
   unfold Judgment_eq.
   steps.
 Qed.
-Hint Resolve Judgment_eq_prop: deriv
-
-Check @root.
-
-
-
-
+(* apply_anywhere Judgment_eq_prop. *)
+Hint Rewrite Judgment_eq_prop: deriv.
 
 
 Fixpoint is_valid(dv: derivation) : bool :=
   match dv with
   (* | N (InferJudgment "InferUnit" _ _ uu T_unit) nil => true *)
-  | N (InferJudgment InferBool _ _ ttrue T_bool) nil => true
-  | N (InferJudgment InferBool _ _ tfalse T_bool) nil => true
-  | N (InferJudgment InferNat _ _ zero T_nat) nil => true
-  | N (InferJudgment InferNat Θ Γ (succ t) T_nat) (dv'::nil) =>
-    match dv' with
-    | N j _ => andb (j ?= (InferJudgment InferNat Θ Γ t T_nat)) (is_valid dv')
-    end
+
+  (* Bools *)
+  | N (J (InferBool | CheckBool) _ _ ttrue T_bool) nil => true
+  | N (J (InferBool | CheckBool) _ _ tfalse T_bool) nil => true
+
+  (* Naturals *)
+  | N (J InferNat _ _ zero T_nat) nil => true
+  | N (J InferNat Θ Γ (succ t) T_nat) (N j nil as dv' ::nil) =>
+    (j ?= (J InferNat Θ Γ t T_nat)) && (is_valid dv')
+
+  (* If then else *)
+  | N (J InferIf Θ Γ (ite b t1 t2) T)
+      ((N jb nil as db)
+         ::(N ((J I1 _ ((x,Te1)::_) _ T1) as j1) nil as d1)
+         ::(N ((J I2 _ ((_,Te2)::_) _ T2) as j2) nil as d2)
+         ::nil) =>
+    (jb ?= (J CheckBool Θ Γ b T_bool)) && (is_valid db)
+    && (j1 ?= (J I1 Θ ((x, T_equiv b ttrue)::Γ) t1 T1)) && (is_valid d1)
+    && (j2 ?= (J I2 Θ ((x, T_equiv b tfalse)::Γ) t2 T2)) && (is_valid d2)
+    && tree_eq T (T_ite b T1 T2)
+
+
   | _ => false
   end.
 
+Definition Inb x l : bool := if (in_dec PeanoNat.Nat.eq_dec x l) then true else false.
+Notation "x ?∈ l" := (Inb x l) (at level 70, l at next level).
+Definition subsetb l1 l2 : bool := forallb (fun x => Inb x l2 ) l1.
+Notation "a ?⊂ b" := (subsetb a b) (at level 70, b at next level).
+Lemma subsetb_prop : forall l1 l2, (l1 ?⊂ l2 = true) <-> (subset l1 l2).
+Proof.
+  intros.
+  unfold subsetb, Inb, subset, forallb.
+  induction l1;  steps.
+Qed.
 
 
+Fixpoint check_fv_context (Θ:list nat) Γ : bool :=
+  match Γ with
+  | nil => true
+  | (x,T)::Γ' => check_fv_context Θ Γ' &&
+               ((fv T) ?⊂ (support Γ')) &&
+               (x ?∈ (support Γ' )) &&
+               ((pfv T type_var) ?⊂ Θ)
+  end.
+
+
+Ltac inst_list_prop:=
+  match goal with
+    | H: forall x, x ∈ ?a1::nil -> _ |- _ => unshelve epose proof (H a1 _); clear H
+    | H: forall x, x ∈ ?a1::?a2::nil -> _ |- _ => unshelve epose proof (H a1 _); unshelve epose proof (H a2 _); clear H
+    | H: forall x, x ∈ ?a1::?a2::?a3::nil -> _ |- _ => unshelve epose proof (H a1 _); unshelve epose proof (H a2 _); unshelve epose proof (H a3 _); clear H
+  end.
+
+
+Ltac lighter :=
+  (intros) ||
+  (congruence) ||
+  (subst) ||
+  (destruct_and) ||
+  intuition auto ||
+  (cbn in *)
+   .
+
+Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_tree (root dv)) 0 /\ wf (J_type (root dv)) 0.
+Proof.
+  induction dv using derivation_ind.
+  intros.
+  unfold root, J_tree, J_type.
+  unfold forallP in X.
+
+  unfold is_valid in H.
+
+  repeat subst || bools || destruct_and || rewrite Judgment_eq_prop in * || rewrite tree_eq_prop in * || inst_list_prop || invert_constructor_equalities || fold is_valid in * ||  (destruct_match; repeat fold is_valid in * ; try solve [congruence]) || eauto with cbn wf || intuition auto || simpl.
+Qed.
+
+Lemma is_valid_wf_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf t 0.
+Proof.
+  intros.
+  pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ). steps.
+Qed.
+
+Lemma is_valid_wf_T : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf T 0.
+Proof.
+  intros.
+  pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ). steps.
+Qed.
+
+(*
+Lemma is_valid_support_term : forall n Θ Γ t T, is_valid (J n Θ Γ t T) = true -> subset (fv t) (support Γ)
+Lemma is_valid_wf_context : forall n Θ Γ t T,  is_valid (J n Θ Γ t T) = true ->
+  *)
+Hint Resolve is_valid_wf_t: deriv.
+Hint Resolve is_valid_wf_T: deriv.
+Hint Rewrite Judgment_eq_prop: deriv.
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
 Proof.
-  remember (fun dv => (is_valid dv) = true -> is_true (root dv)) as P.
-  intros dv.
-  assert (( is_valid dv = true -> is_true (root dv)) = P dv) as Hdv. steps.
-  rewrite Hdv.
-  apply (derivation_ind dv P).
-  rewrite HeqP.
+  induction dv using derivation_ind.
   intros.
   unfold forallP in X.
   unfold is_true. simpl.
-  destruct J eqn:HJ.
-  unfold is_valid in H. simpl in H.
-  destruct_match.
-  destruct_match; try solve [congruence].
-  + (* zero *)
-    steps; eauto with deriv.
-  + (* succ *)
-    repeat fold is_valid in H.
-    repeat (destruct_match; try solve [congruence]).
-    apply annotated_reducible_succ.
-    pose proof (X (N (InferJudgment InferNat Θ Γ t0 T_nat) children0)) as H1. bools.
-    destruct H as [H H'].
-    assert (n0 = (InferJudgment InferNat Θ Γ t0 T_nat)) as Hn0. unfold Judgment_eq in H.
-    destruct_match; eauto. inversion H.
-    unfold root in H1. unfold is_true in H1.
-    apply H1.
-    steps.
-    steps.
-  + (* ite *)
-    steps; eauto with deriv.
-
-
+  destruct J0 eqn:HJ.
+  unfold is_valid in H.
+  repeat subst || bools || destruct_and || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || rewrite Judgment_eq_prop in * || rewrite tree_eq_prop in * || inst_list_prop || intuition auto || eauto with deriv cbn.
+                                         eapply annotated_reducible_T_ite; eauto with deriv.
+                                         admit.
+                                         admit.
+                                         admit.
+                                         admit.
+                                         admit.
+                                         admit.
+                                         admit.
+                                         admit.
+                                         admit.
+                                         admit.
+                                         admit.
+                                         admit.
+                                         simpl in H.
+                                         eauto.
+                                         simpl in H0.
+                                         eauto.
 Qed.

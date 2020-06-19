@@ -96,7 +96,11 @@ Proof.
   repeat decide equality || apply fv_tag_dec.
 Qed.
 Definition tree_eq t1 t2 : bool := if (tree_eq_dec t1 t2) then true else false.
-
+Lemma tree_eq_prop : forall t1 t2, (tree_eq t1 t2 = true) <-> t1 = t2.
+Proof.
+  unfold tree_eq.
+  steps.
+Qed.
 
 (* types defined in terms out of the previous types *)
 Definition intersect T0 Ts := T_forall T_nat (T_rec (lvar 0 term_var) T0 Ts).

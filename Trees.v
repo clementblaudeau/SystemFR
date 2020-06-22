@@ -1,5 +1,7 @@
 Require Export SystemFR.Tactics.
 
+Import Coq.Bool.Bool.
+
 Inductive fv_tag: Set := term_var | type_var.
 
 Ltac destruct_tag :=
@@ -182,6 +184,97 @@ with is_annotated_type T :=
   | _ => False
   end
 .
+Fixpoint is_annotated_termb t :=
+  match t with
+  | fvar y term_var => true
+  | lvar _ term_var => true
+  | err T => is_annotated_typeb T
+
+  | uu => true
+
+  | tsize t => is_annotated_termb t
+
+  | lambda T t' => is_annotated_typeb T && is_annotated_termb t'
+  | app t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+
+  | forall_inst t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+
+  | type_abs t => is_annotated_termb t
+  | type_inst t T => is_annotated_termb t && is_annotated_typeb T
+
+  | pp t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+  | pi1 t' => is_annotated_termb t'
+  | pi2 t' => is_annotated_termb t'
+
+  | because t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+  | get_refinement_witness t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+
+  | ttrue => true
+  | tfalse => true
+  | ite t1 t2 t3 => is_annotated_termb t1 && is_annotated_termb t2 && is_annotated_termb t3
+  | boolean_recognizer _ t => is_annotated_termb t
+
+  | zero => true
+  | succ t' => is_annotated_termb t'
+  | tmatch t' t0 ts => is_annotated_termb t' && is_annotated_termb t0 && is_annotated_termb ts
+
+  | tfix T t' => is_annotated_typeb T && is_annotated_termb t'
+
+  | notype_tlet t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+  | tlet t1 A t2 => is_annotated_termb t1 && is_annotated_typeb A && is_annotated_termb t2
+  | trefl t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+
+  | tfold T t => is_annotated_typeb T && is_annotated_termb t
+  | tunfold t => is_annotated_termb t
+  | tunfold_in t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+  | tunfold_pos_in t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+
+  | tleft t => is_annotated_termb t
+  | tright t => is_annotated_termb t
+  | sum_match t tl tr => is_annotated_termb t && is_annotated_termb tl && is_annotated_termb tr
+
+  | typecheck t T => is_annotated_termb t && is_annotated_typeb T
+
+  | _ => false
+  end
+with is_annotated_typeb T :=
+  match T with
+  | fvar y type_var => true
+  | lvar y type_var => true
+  | T_unit => true
+  | T_bool => true
+  | T_nat => true
+  | T_refine A p => is_annotated_typeb A && is_annotated_termb p
+  | T_type_refine A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_prod A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_arrow A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_sum A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_intersection A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_union A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_top => true
+  | T_bot => true
+  | T_equiv t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+  | T_forall A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_exists A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_abs T => is_annotated_typeb T
+  | T_rec n T0 Ts => is_annotated_termb n && is_annotated_typeb T0 && is_annotated_typeb Ts
+  | _ => false
+  end
+.
+
+Lemma annotated_term_type_bool_aux : forall t, (is_annotated_termb t = true <-> is_annotated_term t) /\ (is_annotated_typeb t = true <-> is_annotated_type t).
+  induction t ; repeat bools || steps.
+Qed.
+
+Lemma annotated_term_bool : forall t, (is_annotated_termb t = true <-> is_annotated_term t).
+  intros.
+  apply (proj1 (annotated_term_type_bool_aux t)).
+Qed.
+
+Lemma annotated_type_bool : forall t, (is_annotated_typeb t = true <-> is_annotated_type t).
+  intros.
+  apply (proj2 (annotated_term_type_bool_aux t)).
+Qed.
 
 
 Fixpoint is_erased_term t :=

@@ -6,7 +6,6 @@ Require Export SystemFR.AnnotatedIte.
 Require Export SystemFR.AnnotatedArrow.
 
 Import Coq.Strings.String.
-Import Coq.Lists.List.
 Import Coq.Bool.Bool.
 Require Import Psatz.
 
@@ -20,14 +19,214 @@ Hint Resolve annotated_reducible_T_ite: deriv.
 Hint Resolve annotated_reducible_app: deriv.
 
 Hint Rewrite tree_eq_prop: deriv.
+
+
+(* Annotated - boolean version *)
+
+Fixpoint is_annotated_termb t :=
+  match t with
+  | fvar y term_var => true
+  | lvar _ term_var => true
+  | err T => is_annotated_typeb T
+
+  | uu => true
+
+  | tsize t => is_annotated_termb t
+
+  | lambda T t' => is_annotated_typeb T && is_annotated_termb t'
+  | app t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+
+  | forall_inst t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+
+  | type_abs t => is_annotated_termb t
+  | type_inst t T => is_annotated_termb t && is_annotated_typeb T
+
+  | pp t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+  | pi1 t' => is_annotated_termb t'
+  | pi2 t' => is_annotated_termb t'
+
+  | because t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+  | get_refinement_witness t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+
+  | ttrue => true
+  | tfalse => true
+  | ite t1 t2 t3 => is_annotated_termb t1 && is_annotated_termb t2 && is_annotated_termb t3
+  | boolean_recognizer _ t => is_annotated_termb t
+
+  | zero => true
+  | succ t' => is_annotated_termb t'
+  | tmatch t' t0 ts => is_annotated_termb t' && is_annotated_termb t0 && is_annotated_termb ts
+
+  | tfix T t' => is_annotated_typeb T && is_annotated_termb t'
+
+  | notype_tlet t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+  | tlet t1 A t2 => is_annotated_termb t1 && is_annotated_typeb A && is_annotated_termb t2
+  | trefl t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+
+  | tfold T t => is_annotated_typeb T && is_annotated_termb t
+  | tunfold t => is_annotated_termb t
+  | tunfold_in t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+  | tunfold_pos_in t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+
+  | tleft t => is_annotated_termb t
+  | tright t => is_annotated_termb t
+  | sum_match t tl tr => is_annotated_termb t && is_annotated_termb tl && is_annotated_termb tr
+
+  | typecheck t T => is_annotated_termb t && is_annotated_typeb T
+
+  | _ => false
+  end
+with is_annotated_typeb T :=
+  match T with
+  | fvar y type_var => true
+  | lvar y type_var => true
+  | T_unit => true
+  | T_bool => true
+  | T_nat => true
+  | T_refine A p => is_annotated_typeb A && is_annotated_termb p
+  | T_type_refine A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_prod A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_arrow A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_sum A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_intersection A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_union A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_top => true
+  | T_bot => true
+  | T_equiv t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+  | T_forall A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_exists A B => is_annotated_typeb A && is_annotated_typeb B
+  | T_abs T => is_annotated_typeb T
+  | T_rec n T0 Ts => is_annotated_termb n && is_annotated_typeb T0 && is_annotated_typeb Ts
+  | _ => false
+  end
+.
+
+Lemma annotated_term_type_bool_aux : forall t, (is_annotated_termb t = true <-> is_annotated_term t) /\ (is_annotated_typeb t = true <-> is_annotated_type t).
+  induction t ; repeat bools || steps.
+Qed.
+
+Lemma annotated_term_bool : forall t, (is_annotated_termb t = true <-> is_annotated_term t).
+  intros.
+  apply (proj1 (annotated_term_type_bool_aux t)).
+Qed.
+
+Lemma annotated_type_bool : forall t, (is_annotated_typeb t = true <-> is_annotated_type t).
+  intros.
+  apply (proj2 (annotated_term_type_bool_aux t)).
+Qed.
+
 Hint Rewrite annotated_term_bool: deriv.
 Hint Rewrite annotated_type_bool: deriv.
+
+
+Fixpoint wfb t k :=
+  match t with
+  | fvar _ _ => true
+  | lvar i term_var => PeanoNat.Nat.ltb i k
+  | lvar i type_var => true
+
+  | notype_err => true
+  | err T => wfb T k
+
+  | uu => true
+
+  | tsize t => wfb t k
+
+  | notype_lambda t' => wfb t' (S k)
+  | lambda T t' => wfb T k && wfb t' (S k)
+  | app t1 t2 => wfb t1 k && wfb t2 k
+
+  | forall_inst t1 t2 => wfb t1 k && wfb t2 k
+
+  | type_abs t => wfb t k
+  | type_inst t T => wfb t k && wfb T k
+
+  | pp t1 t2 => wfb t1 k && wfb t2 k
+  | pi1 t => wfb t k
+  | pi2 t => wfb t k
+
+  | because t1 t2 => wfb t1 k && wfb t2 k
+  | get_refinement_witness t1 t2 => wfb t1 k && wfb t2 (S k)
+
+  | ttrue => true
+  | tfalse => true
+  | ite t1 t2 t3 => wfb t1 k && wfb t2 k && wfb t3 k
+  | boolean_recognizer _ t => wfb t k
+
+  | zero => true
+  | succ t' => wfb t' k
+  | tmatch t' t1 t2 =>
+      wfb t' k &&
+      wfb t1 k &&
+      wfb t2 (S k)
+
+  | tfix T t' => wfb T (S k) && wfb t' (S (S k))
+  | notype_tfix t' => wfb t' (S (S k))
+
+  | notype_tlet t1 t2 => wfb t1 k && wfb t2 (S k)
+  | tlet t1 T t2 => wfb t1 k && wfb T k && wfb t2 (S k)
+
+  | trefl t1 t2 => wfb t1 k && wfb t2 k
+
+  | tfold T t' => wfb T k && wfb t' k
+  | tunfold t' => wfb t' k
+  | tunfold_in t1 t2 => wfb t1 k && wfb t2 (S k)
+  | tunfold_pos_in t1 t2 => wfb t1 k && wfb t2 (S k)
+
+  | tleft t' => wfb t' k
+  | tright t' => wfb t' k
+  | sum_match t' tl tr => wfb t' k && wfb tl (S k) && wfb tr (S k)
+
+  | typecheck t T => wfb t k && wfb T k
+
+  | T_unit => true
+  | T_bool => true
+  | T_nat => true
+  | T_prod T1 T2 => wfb T1 k && wfb T2 (S k)
+  | T_arrow T1 T2 => wfb T1 k && wfb T2 (S k)
+  | T_sum T1 T2 => wfb T1 k && wfb T2 k
+  | T_refine T p => wfb T k && wfb p (S k)
+  | T_type_refine T1 T2 => wfb T1 k && wfb T2 (S k)
+  | T_intersection T1 T2 => wfb T1 k && wfb T2 k
+  | T_union T1 T2 => wfb T1 k && wfb T2 k
+  | T_top => true
+  | T_bot => true
+  | T_equiv t1 t2 => wfb t1 k && wfb t2 k
+  | T_forall T1 T2 => wfb T1 k && wfb T2 (S k)
+  | T_exists T1 T2 => wfb T1 k && wfb T2 (S k)
+  | T_abs T => wfb T k
+  | T_rec n T0 Ts => wfb n k && wfb T0 k && wfb Ts k
+  end.
+
+Fixpoint wfsb (gamma: list (nat * tree)) k :=
+  match gamma with
+  | nil => true
+  | (x,A) :: gamma' => wfb A k && wfsb gamma' k
+  end.
+
+Lemma wfb_prop : forall t k, (wfb t k = true) <-> (wf t k).
+Proof.
+  induction t;
+    (repeat bools || steps || rewrite PeanoNat.Nat.ltb_lt in * || rewrite PeanoNat.Nat.leb_le in * || lia || eauto with eapply_any).
+Qed.
+
+Lemma wfsb_prop : forall Γ k, (wfsb Γ k = true) <-> (wfs Γ k).
+Proof.
+  induction Γ.
+  steps.
+  repeat bools || steps || rewrite  wfb_prop in * || eauto with eapply_any.
+Qed.
+
+Hint Rewrite wfb_prop wfsb_prop: deriv.
+
 (* Judgments *)
 Inductive Judgment_name :=
 | InferNat
 | InferBool
 | CheckBool
-| InferIf.
+| InferIf
+| InferApp
+| InferLambda.
 
 Inductive Judgment:=
 | J(name: Judgment_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment.
@@ -55,13 +254,18 @@ Definition children {T} nt : (list (NodeTree T)) :=
   | N _ c => c
   end.
 
+Lemma J_tree_root : forall n Θ Γ t T c, J_tree (root (N (J n Θ Γ t T) c)) = t. Proof. steps. Qed.
+Lemma J_type_root : forall n Θ Γ t T c, J_type (root (N (J n Θ Γ t T) c)) = T. Proof. steps. Qed.
+Lemma J_context_root : forall n Θ Γ t T c, J_context (root (N (J n Θ Γ t T) c)) = Γ. Proof. steps. Qed.
+Hint Rewrite J_tree_root J_type_root  J_context_root: deriv.
+
 Definition derivation := NodeTree Judgment.
 
 (* Induction on derivations *)
 
 Fixpoint derivation_size (dv: derivation) : nat :=
   match dv with
-  | N n c => S (max ( map derivation_size c))
+  | N n c => S (max ( List.map derivation_size c))
   end.
 
 Definition forallP {T} P (l: list T) := forall (k: T), k ∈ l -> P k.
@@ -78,8 +282,8 @@ Proof.
   apply le_S_n in H.
   apply X.
   intros k Hk.
-  pose proof (in_map derivation_size children0 k Hk) as H_k_sizes.
-  pose proof (in_list_smaller (map derivation_size children0) (derivation_size k) H_k_sizes) as H_max.
+  pose proof (List.in_map derivation_size children0 k Hk) as H_k_sizes.
+  pose proof (in_list_smaller (List.map derivation_size children0) (derivation_size k) H_k_sizes) as H_max.
   apply IHn; steps. lia.
 Qed.
 
@@ -120,25 +324,25 @@ Qed.
 (* apply_anywhere Judgment_eq_prop. *)
 Hint Rewrite Judgment_eq_prop: deriv.
 
-Definition Inb x l : bool := if (in_dec PeanoNat.Nat.eq_dec x l) then true else false.
+Definition Inb x l : bool := if (List.in_dec PeanoNat.Nat.eq_dec x l) then true else false.
 Notation "x ?∈ l" := (Inb x l) (at level 70, l at next level).
 Notation "x ?∉ l" := (negb (Inb x l)) (at level 70, l at next level).
 Lemma Inb_prop : forall x A, (x ?∈ A = true) <-> (x ∈ A).
 Proof.
   intros.
-  unfold Inb, forallb.
+  unfold Inb.
   steps.
 Qed.
 Lemma Inb_prop2 : forall x A, (x ?∉ A = true) <-> not(x ∈ A).
 Proof.
   intros.
-  unfold Inb, forallb.
+  unfold Inb.
   steps.
 Qed.
 Lemma Inb_prop3 : forall x A, (x ?∈ A = false) <-> not(x ∈ A).
 Proof.
   intros.
-  unfold Inb, forallb.
+  unfold Inb.
   steps.
 Qed.
 Hint Rewrite Inb_prop: deriv.
@@ -146,12 +350,12 @@ Hint Rewrite Inb_prop2: deriv.
 Hint Rewrite Inb_prop3: deriv.
 
 
-Definition subsetb l1 l2 : bool := forallb (fun x => Inb x l2 ) l1.
+Definition subsetb l1 l2 : bool := List.forallb (fun x => Inb x l2 ) l1.
 Notation "a ?⊂ b" := (subsetb a b) (at level 70, b at next level).
 Lemma subsetb_prop : forall l1 l2, (l1 ?⊂ l2 = true) <-> (subset l1 l2).
 Proof.
   intros.
-  unfold subsetb, Inb, subset, forallb.
+  unfold subsetb, Inb, subset, List.forallb.
   induction l1;  steps.
 Qed.
 Hint Rewrite subsetb_prop: deriv.

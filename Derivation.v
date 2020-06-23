@@ -41,9 +41,25 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && is_annotated_termb t2
     && (tree_eq T (open 0 V t2))
 
+  (* [Anotated] Lambda *)
+  | N (J InferLambda Θ Γ (lambda U t) (T_arrow _ V as T))
+      ((N ((J I1 _ ((x,_)::_) _ _) as j) nil as d)::nil) =>
+    (j ?= (J I1 Θ ((x,U)::Γ) (open 0 t (fvar x term_var)) (open 0 V (fvar x term_var)))) && (is_valid d)
+    && is_annotated_termb t
+    && wfb U 0
+    && (x ?∉ fv_context Γ)
+    && (x ?∉ Θ)
+    && (x ?∉ (fv V))
+    && (x ?∉ (fv t))
+    && ((fv U) ?⊂ (support Γ))
+    && (fv_context Γ ?⊂ (support Γ))
+    && is_annotated_typeb V
+    && tree_eq T (T_arrow U V)
 
   | _ => false
   end.
+
+
 
 Lemma subset_context_support: forall Γ, subset (support Γ) (fv_context Γ).
 Proof.
@@ -65,25 +81,9 @@ Fixpoint check_fv_context (Θ:list nat) Γ : bool :=
 
 Ltac inst_list_prop:=
   match goal with
-    | H: forall x, x ∈ ?a1::nil -> _ |- _ => unshelve epose proof (H a1 _); clear H
-    | H: forall x, x ∈ ?a1::?a2::nil -> _ |- _ => unshelve epose proof (H a1 _); unshelve epose proof (H a2 _); clear H
-    | H: forall x, x ∈ ?a1::?a2::?a3::nil -> _ |- _ => unshelve epose proof (H a1 _); unshelve epose proof (H a2 _); unshelve epose proof (H a3 _); clear H
-  end.
-
-
-Ltac lighter :=
-  (intros) ||
-  (congruence) ||
-  (subst) ||
-  (destruct_and) ||
-  intuition auto ||
-  (cbn in *).
-
-Ltac wf_root :=
-  match goal with
-  | H: wf (J_tree (root (N (J _ _ _ _ _) _))) _ |- _ => simpl in H
-  | H: wf (J_type (root (N (J _ _ _ _ _) _))) _ |- _ => simpl in H
-  | H: wf (J_context (root (N (J _ _ _ _ _) _))) _ |- _ => simpl in H
+  | H: forall x, x ∈ ?a1::nil -> _ |- _ => unshelve epose proof (H a1 _); clear H
+  | H: forall x, x ∈ ?a1::?a2::nil -> _ |- _ => unshelve epose proof (H a1 _); unshelve epose proof (H a2 _); clear H
+  | H: forall x, x ∈ ?a1::?a2::?a3::nil -> _ |- _ => unshelve epose proof (H a1 _); unshelve epose proof (H a2 _); unshelve epose proof (H a3 _); clear H
   end.
 
 
@@ -92,8 +92,9 @@ Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_tree (root dv)) 0 
 Proof.
   induction dv using derivation_ind.
   intros. unfold root, J_tree, J_type. unfold forallP in X. unfold is_valid in H.
-  (repeat subst || bools || destruct_and || autorewrite with deriv in * || inst_list_prop || invert_constructor_equalities || (destruct_match; try solve [congruence];  repeat fold is_valid in *) || wf_root || intuition auto || simpl) ; eauto with cbn wf.
-Qed.
+  (repeat subst || bools || destruct_and || autorewrite with deriv in * || inst_list_prop || invert_constructor_equalities || (destruct_match; try solve [congruence];  repeat fold is_valid in *) || intuition auto || simpl || match goal with |H: wf (_ _) _ |- _ => simpl in H end || eauto with cbn wf).
+   Qed.
+
 
 Lemma is_valid_wf_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf t 0.
 Proof.
@@ -105,11 +106,21 @@ Proof.
   intros; pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ); steps.
 Qed.
 
-Lemma J_tree_root : forall n Θ Γ t T c, J_tree (root (N (J n Θ Γ t T) c)) = t. Proof. steps. Qed.
-Lemma J_type_root : forall n Θ Γ t T c, J_type (root (N (J n Θ Γ t T) c)) = T. Proof. steps. Qed.
-Lemma J_context_root : forall n Θ Γ t T c, J_context (root (N (J n Θ Γ t T) c)) = Γ. Proof. steps. Qed.
-Hint Rewrite J_tree_root J_type_root  J_context_root: deriv.
+Lemma support_fvar : forall n U Γ, subset (pfv (fvar n term_var) term_var) (@support nat tree ((n,U)::Γ)).
+Proof.
+  intros.
+  simpl.
+  destruct_match; try solve [congruence]; eauto with sets.
+Qed.
+Hint Resolve support_fvar: sets.
 
+Lemma support_open : forall t1 t2 tag k A, subset (pfv (open k t1 t2) tag) A ->
+                                      subset (pfv t2 tag) A ->
+                                      subset (pfv t1 tag) A.
+Proof.
+  induction t1; repeat steps || match goal with | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H end; eauto with sets ; apply subset_union2; eauto with eapply_any sets.
+Qed.
+Hint Resolve support_open: sets.
 
 Lemma is_valid_support_term_aux : forall dv, is_valid dv = true -> subset (fv (J_tree (root dv)) ) (support (J_context (root dv))) /\ subset (fv (J_type (root dv)) ) (support (J_context (root dv))).
 Proof.
@@ -119,7 +130,14 @@ Proof.
   unfold root, J_tree, J_type.
   unfold forallP in X.
   unfold is_valid in H.
-  repeat subst || bools || destruct_and || autorewrite with deriv in * || inst_list_prop || invert_constructor_equalities || fold is_valid in * ||  (destruct_match; repeat fold is_valid in * ; try solve [congruence]) || wf_root || intuition auto || simpl  ; eauto using subset_transitive, subset_union2, fv_open with cbn sets.
+  repeat (subst || bools || destruct_and || (autorewrite with deriv in *) || inst_list_prop || invert_constructor_equalities || fold is_valid in * ||  (destruct_match; repeat fold is_valid in * ; try solve [congruence]) || intuition auto || simpl ||
+         match goal with
+         | H: subset (pfv (T_arrow _ _) _) _ |- _ => simpl in H
+         | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H
+         | H: _ |- subset ( _ ++ _ ) _ => apply subset_union2
+         |H: subset (pfv (open ?k ?t1 ?t2) ?tag) ?A |- _ => ( try solve [eauto with cbn sets] ; (apply (support_open t1 t2 tag k) in H))
+         end ) ;
+  eauto using subset_transitive, subset_union2, fv_open with sets.
 Qed.
 
 Lemma is_valid_support_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> subset (fv t) (support Γ).
@@ -155,6 +173,8 @@ Proof.
   steps.
 Qed.
 Hint Resolve in_subset_not: sets.
+Hint Unfold fv: deriv.
+
 
 
 (* Main soundess result *)
@@ -166,19 +186,14 @@ Proof.
   unfold is_true. simpl.
   destruct J eqn:HJ.
   unfold is_valid in H.
-  repeat subst || bools || destruct_and || autorewrite with deriv in * || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || inst_list_prop || intuition auto || consume_is_valid.
-   simpl. eauto with deriv cbn sets.
-   simpl. eauto with deriv cbn sets.
-   simpl. eauto with deriv cbn sets.
-   pose proof annotated_reducible_app.
-
-   simpl. eauto with deriv cbn sets.
-   simpl. eauto with deriv cbn sets.
-   simpl. eauto with deriv cbn sets.
-   simpl. eauto with deriv cbn sets.
-
-
-
-
-
-    Qed.
+  repeat (subst || bools || destruct_and || autorewrite with deriv in * || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || inst_list_prop || intuition auto || consume_is_valid || simpl || cbn in *); eauto using annotated_reducible_app with deriv cbn sets.
+  eapply annotated_reducible_lambda; eauto.
+  simpl in H.
+  eapply wf_open_rev; eauto.
+  unfold fv in H11.
+  pose proof (support_open t0_2 (fvar n term_var) term_var 0 (n::support Γ) H12).
+  unfold fv.
+  eapply subset_add3; eauto.
+  apply H10; eauto.
+  apply (support_fvar n zero Γ).
+Qed.

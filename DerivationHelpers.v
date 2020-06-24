@@ -4,6 +4,8 @@ Require Export SystemFR.AnnotatedBool.
 Require Export SystemFR.AnnotatedNat.
 Require Export SystemFR.AnnotatedIte.
 Require Export SystemFR.AnnotatedArrow.
+Require Export SystemFR.AnnotatedPair.
+
 
 Import Coq.Strings.String.
 Import Coq.Bool.Bool.
@@ -18,6 +20,9 @@ Hint Resolve annotated_reducible_succ: deriv.
 Hint Resolve annotated_reducible_T_ite: deriv.
 Hint Resolve annotated_reducible_app: deriv.
 Hint Resolve annotated_reducible_lambda: deriv.
+Hint Resolve annotated_reducible_pp: deriv.
+Hint Resolve annotated_reducible_pi1: deriv.
+Hint Resolve annotated_reducible_pi2: deriv.
 
 Hint Rewrite tree_eq_prop: deriv.
 
@@ -78,28 +83,28 @@ Fixpoint is_annotated_termb t :=
   | _ => false
   end
 with is_annotated_typeb T :=
-  match T with
-  | fvar y type_var => true
-  | lvar y type_var => true
-  | T_unit => true
-  | T_bool => true
-  | T_nat => true
-  | T_refine A p => is_annotated_typeb A && is_annotated_termb p
-  | T_type_refine A B => is_annotated_typeb A && is_annotated_typeb B
-  | T_prod A B => is_annotated_typeb A && is_annotated_typeb B
-  | T_arrow A B => is_annotated_typeb A && is_annotated_typeb B
-  | T_sum A B => is_annotated_typeb A && is_annotated_typeb B
-  | T_intersection A B => is_annotated_typeb A && is_annotated_typeb B
-  | T_union A B => is_annotated_typeb A && is_annotated_typeb B
-  | T_top => true
-  | T_bot => true
-  | T_equiv t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
-  | T_forall A B => is_annotated_typeb A && is_annotated_typeb B
-  | T_exists A B => is_annotated_typeb A && is_annotated_typeb B
-  | T_abs T => is_annotated_typeb T
-  | T_rec n T0 Ts => is_annotated_termb n && is_annotated_typeb T0 && is_annotated_typeb Ts
-  | _ => false
-  end
+       match T with
+       | fvar y type_var => true
+       | lvar y type_var => true
+       | T_unit => true
+       | T_bool => true
+       | T_nat => true
+       | T_refine A p => is_annotated_typeb A && is_annotated_termb p
+       | T_type_refine A B => is_annotated_typeb A && is_annotated_typeb B
+       | T_prod A B => is_annotated_typeb A && is_annotated_typeb B
+       | T_arrow A B => is_annotated_typeb A && is_annotated_typeb B
+       | T_sum A B => is_annotated_typeb A && is_annotated_typeb B
+       | T_intersection A B => is_annotated_typeb A && is_annotated_typeb B
+       | T_union A B => is_annotated_typeb A && is_annotated_typeb B
+       | T_top => true
+       | T_bot => true
+       | T_equiv t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
+       | T_forall A B => is_annotated_typeb A && is_annotated_typeb B
+       | T_exists A B => is_annotated_typeb A && is_annotated_typeb B
+       | T_abs T => is_annotated_typeb T
+       | T_rec n T0 Ts => is_annotated_termb n && is_annotated_typeb T0 && is_annotated_typeb Ts
+       | _ => false
+       end
 .
 
 Lemma annotated_term_type_bool_aux : forall t, (is_annotated_termb t = true <-> is_annotated_term t) /\ (is_annotated_typeb t = true <-> is_annotated_type t).
@@ -157,9 +162,9 @@ Fixpoint wfb t k :=
   | zero => true
   | succ t' => wfb t' k
   | tmatch t' t1 t2 =>
-      wfb t' k &&
-      wfb t1 k &&
-      wfb t2 (S k)
+    wfb t' k &&
+    wfb t1 k &&
+    wfb t2 (S k)
 
   | tfix T t' => wfb T (S k) && wfb t' (S (S k))
   | notype_tfix t' => wfb t' (S (S k))
@@ -225,6 +230,9 @@ Inductive Judgment_name :=
 | InferNat
 | InferBool
 | CheckBool
+| InferPP
+| InferPi1
+| InferPi2
 | InferIf
 | InferApp
 | InferLambda.

@@ -31,7 +31,26 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (x ?∉ (fv_context Γ))
     && ( x ?∉ Θ )
 
-  (* [Anotated] App *)
+  (* Pairs *)
+  (* PP *)
+  | N (J InferPP Θ Γ (pp t1 t2) (T_prod A B))
+      ((N ((J I1 _ _ _ _) as j1) nil as d1)
+         :: (N ((J I2 _ _ _ _) as j2) nil as d2)::nil) =>
+    (j1 ?= (J I1 Θ Γ t1 A)) && (is_valid d1)
+    && (j2 ?= (J I2 Θ Γ t2 (open 0 B t1))) && (is_valid d2)
+    && (is_annotated_termb t1) && (is_annotated_typeb B)
+  (* Pi1 *)
+  | N (J InferPi1 Θ Γ (pi1 t) A) ((N ((J I1 _ _ _ (T_prod _ B)) as j) nil as d)::nil) =>
+    (j ?= (J I1 Θ Γ t (T_prod A B))) && (is_valid d)
+  (* Pi2 *)
+  | N (J InferPi2 Θ Γ (pi2 t) T) ((N ((J I1 _ _ _ (T_prod A B)) as j) nil as d)::nil) =>
+    (j ?= (J I1 Θ Γ t (T_prod A B))) && (is_valid d)
+    && (is_annotated_typeb B)
+    && (is_annotated_termb t)
+    && ((fv B) ?⊂ (support Γ))
+    && (tree_eq T (open 0 B (pi1 t)))
+
+  (* App *)
   | N (J InferApp Θ Γ (app t1 t2) T)
       ((N ((J I1 _ _ _ (T_arrow U V)) as j1) nil as d1)
          :: (N ((J I2 _ _ _ _) as j2) nil as d2)::nil) =>
@@ -41,7 +60,7 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && is_annotated_termb t2
     && (tree_eq T (open 0 V t2))
 
-  (* [Anotated] Lambda *)
+  (* Lambda *)
   | N (J InferLambda Θ Γ (lambda U t) (T_arrow _ V as T))
       ((N ((J I1 _ ((x,_)::_) _ _) as j) nil as d)::nil) =>
     (j ?= (J I1 Θ ((x,U)::Γ) (open 0 t (fvar x term_var)) (open 0 V (fvar x term_var)))) && (is_valid d)
@@ -54,7 +73,8 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && ((fv U) ?⊂ (support Γ))
     && (fv_context Γ ?⊂ (support Γ))
     && is_annotated_typeb V
-    && tree_eq T (T_arrow U V)
+    && (tree_eq T (T_arrow U V))
+
 
   | _ => false
   end.
@@ -115,7 +135,7 @@ Proof.
   intros.
   unfold root, J_tree, J_type.
   unfold forallP in X.
-  unfold is_valid in H.
+  unfold is_valid in H ;
   repeat (subst || bools || destruct_and || (autorewrite with deriv in *) || inst_list_prop || invert_constructor_equalities || fold is_valid in * ||  (destruct_match; repeat fold is_valid in * ; try solve [congruence]) || intuition auto || simpl ||
          match goal with
          | H: subset (pfv (T_arrow _ _) _) _ |- _ => simpl in H
@@ -183,4 +203,7 @@ Proof.
   destruct J eqn:HJ.
   unfold is_valid in H.
   repeat (subst || bools || destruct_and || (autorewrite with deriv in *) || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || inst_list_prop || intuition auto || consume_is_valid || simpl || cbn in * || subset_open) ;  eauto 3 using support_open, wf_open_rev, subset_add3, subset_any_type with deriv sets.
-Qed.
+  apply annotated_reducible_pp; eauto using wf_open_rev.
+  eauto using support_open.
+  eapply support_open; eauto.
+                                          Qed.

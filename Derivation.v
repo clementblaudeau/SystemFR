@@ -106,21 +106,7 @@ Proof.
   intros; pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ); steps.
 Qed.
 
-Lemma support_fvar : forall n U Γ, subset (pfv (fvar n term_var) term_var) (@support nat tree ((n,U)::Γ)).
-Proof.
-  intros.
-  simpl.
-  destruct_match; try solve [congruence]; eauto with sets.
-Qed.
-Hint Resolve support_fvar: sets.
 
-Lemma support_open : forall t1 t2 tag k A, subset (pfv (open k t1 t2) tag) A ->
-                                      subset (pfv t2 tag) A ->
-                                      subset (pfv t1 tag) A.
-Proof.
-  induction t1; repeat steps || match goal with | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H end; eauto with sets ; apply subset_union2; eauto with eapply_any sets.
-Qed.
-Hint Resolve support_open: sets.
 
 Lemma is_valid_support_term_aux : forall dv, is_valid dv = true -> subset (fv (J_tree (root dv)) ) (support (J_context (root dv))) /\ subset (fv (J_type (root dv)) ) (support (J_context (root dv))).
 Proof.
@@ -175,6 +161,16 @@ Qed.
 Hint Resolve in_subset_not: sets.
 Hint Unfold fv: deriv.
 
+Lemma subset_any_type: forall n Γ,  subset (pfv (fvar n term_var) term_var) (n :: @support nat tree Γ).
+Proof.
+  intros. apply (support_fvar n zero Γ). Qed.
+Hint Resolve subset_any_type: deriv.
+
+Ltac subset_open :=
+  match goal with
+  | H: subset (fv (open ?k ?t (fvar ?n term_var))) (?n :: (support ?Γ)) |- _ =>
+    pose proof (support_open t (fvar n term_var) term_var k (n::support Γ) H (subset_any_type n Γ)); clear H
+  end.
 
 
 (* Main soundess result *)
@@ -186,14 +182,5 @@ Proof.
   unfold is_true. simpl.
   destruct J eqn:HJ.
   unfold is_valid in H.
-  repeat (subst || bools || destruct_and || autorewrite with deriv in * || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || inst_list_prop || intuition auto || consume_is_valid || simpl || cbn in *); eauto using annotated_reducible_app with deriv cbn sets.
-  eapply annotated_reducible_lambda; eauto.
-  simpl in H.
-  eapply wf_open_rev; eauto.
-  unfold fv in H11.
-  pose proof (support_open t0_2 (fvar n term_var) term_var 0 (n::support Γ) H12).
-  unfold fv.
-  eapply subset_add3; eauto.
-  apply H10; eauto.
-  apply (support_fvar n zero Γ).
+  repeat (subst || bools || destruct_and || (autorewrite with deriv in *) || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || inst_list_prop || intuition auto || consume_is_valid || simpl || cbn in * || subset_open) ;  eauto 3 using support_open, wf_open_rev, subset_add3, subset_any_type with deriv sets.
 Qed.

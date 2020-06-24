@@ -17,6 +17,7 @@ Hint Resolve annotated_reducible_zero: deriv.
 Hint Resolve annotated_reducible_succ: deriv.
 Hint Resolve annotated_reducible_T_ite: deriv.
 Hint Resolve annotated_reducible_app: deriv.
+Hint Resolve annotated_reducible_lambda: deriv.
 
 Hint Rewrite tree_eq_prop: deriv.
 
@@ -321,9 +322,10 @@ Proof.
   unfold Judgment_eq.
   steps.
 Qed.
-(* apply_anywhere Judgment_eq_prop. *)
 Hint Rewrite Judgment_eq_prop: deriv.
 
+
+(* Boolean set inclusion definitions and lemmas *)
 Definition Inb x l : bool := if (List.in_dec PeanoNat.Nat.eq_dec x l) then true else false.
 Notation "x ?∈ l" := (Inb x l) (at level 70, l at next level).
 Notation "x ?∉ l" := (negb (Inb x l)) (at level 70, l at next level).
@@ -349,7 +351,6 @@ Hint Rewrite Inb_prop: deriv.
 Hint Rewrite Inb_prop2: deriv.
 Hint Rewrite Inb_prop3: deriv.
 
-
 Definition subsetb l1 l2 : bool := List.forallb (fun x => Inb x l2 ) l1.
 Notation "a ?⊂ b" := (subsetb a b) (at level 70, b at next level).
 Lemma subsetb_prop : forall l1 l2, (l1 ?⊂ l2 = true) <-> (subset l1 l2).
@@ -359,3 +360,21 @@ Proof.
   induction l1;  steps.
 Qed.
 Hint Rewrite subsetb_prop: deriv.
+
+
+(* Support helper lemmas *)
+Lemma support_fvar : forall n U Γ, subset (pfv (fvar n term_var) term_var) (@support nat tree ((n,U)::Γ)).
+Proof.
+  intros.
+  simpl.
+  destruct_match; try solve [congruence]; eauto with sets.
+Qed.
+Hint Resolve support_fvar: sets.
+
+Lemma support_open : forall t1 t2 tag k A, subset (pfv (open k t1 t2) tag) A ->
+                                      subset (pfv t2 tag) A ->
+                                      subset (pfv t1 tag) A.
+Proof.
+  induction t1; repeat steps || match goal with | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H end; eauto with sets ; apply subset_union2; eauto with eapply_any sets.
+Qed.
+Hint Resolve support_open: sets.

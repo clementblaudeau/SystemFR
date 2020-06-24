@@ -111,7 +111,8 @@ Ltac inst_list_prop:=
 Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_tree (root dv)) 0 /\ wf (J_type (root dv)) 0.
 Proof.
   induction dv using derivation_ind.
-  intros. unfold root, J_tree, J_type. unfold forallP in X. unfold is_valid in H.
+  intros. unfold root, J_tree, J_type. unfold forallP in X.
+  unfold is_valid in H.
   (repeat subst || bools || destruct_and || autorewrite with deriv in * || inst_list_prop || invert_constructor_equalities || (destruct_match; try solve [congruence];  repeat fold is_valid in *) || intuition auto || simpl || match goal with |H: wf (_ _) _ |- _ => simpl in H end || eauto with cbn wf).
    Qed.
 
@@ -191,7 +192,7 @@ Ltac subset_open :=
   | H: subset (fv (open ?k ?t (fvar ?n term_var))) (?n :: (support ?Γ)) |- _ =>
     pose proof (support_open t (fvar n term_var) term_var k (n::support Γ) H (subset_any_type n Γ)); clear H
   end.
-
+Hint Extern 50 => eapply support_open: deriv.
 
 (* Main soundess result *)
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
@@ -202,8 +203,5 @@ Proof.
   unfold is_true. simpl.
   destruct J eqn:HJ.
   unfold is_valid in H.
-  repeat (subst || bools || destruct_and || (autorewrite with deriv in *) || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || inst_list_prop || intuition auto || consume_is_valid || simpl || cbn in * || subset_open) ;  eauto 3 using support_open, wf_open_rev, subset_add3, subset_any_type with deriv sets.
-  apply annotated_reducible_pp; eauto using wf_open_rev.
-  eauto using support_open.
-  eapply support_open; eauto.
-                                          Qed.
+  repeat (subst || bools || destruct_and || (autorewrite with deriv in *) || invert_constructor_equalities || (destruct_match; try solve [congruence] ; repeat fold is_valid in *) || inst_list_prop || intuition auto || consume_is_valid || simpl || cbn in * || subset_open) ;  eauto 4 using support_open, wf_open_rev, subset_add3, subset_any_type with deriv sets.
+Qed.

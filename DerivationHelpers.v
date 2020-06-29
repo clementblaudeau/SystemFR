@@ -5,6 +5,8 @@ Require Export SystemFR.AnnotatedNat.
 Require Export SystemFR.AnnotatedIte.
 Require Export SystemFR.AnnotatedArrow.
 Require Export SystemFR.AnnotatedPair.
+Require Export SystemFR.AnnotatedSum.
+Require Export SystemFR.AnnotatedAddEquality.
 
 
 Import Coq.Strings.String.
@@ -17,15 +19,31 @@ Hint Resolve annotated_reducible_true : deriv.
 Hint Resolve annotated_reducible_false: deriv.
 Hint Resolve annotated_reducible_zero: deriv.
 Hint Resolve annotated_reducible_succ: deriv.
+Hint Resolve annotated_reducible_match: deriv.
 Hint Resolve annotated_reducible_T_ite: deriv.
 Hint Resolve annotated_reducible_app: deriv.
 Hint Resolve annotated_reducible_lambda: deriv.
 Hint Resolve annotated_reducible_pp: deriv.
 Hint Resolve annotated_reducible_pi1: deriv.
 Hint Resolve annotated_reducible_pi2: deriv.
-
+Hint Resolve annotated_reducible_left: deriv.
+Hint Resolve annotated_reducible_right: deriv.
+Hint Resolve annotated_reducible_sum_match: deriv.
 Hint Rewrite tree_eq_prop: deriv.
 
+
+
+(* Bool unequality *)
+Notation "n ?<> m" := (negb (PeanoNat.Nat.eqb n m)) (at level 80).
+Lemma neqb_prop: forall n m, (n ?<> m) = true <-> n <> m.
+Proof.
+  intros.
+  split. intros. unfold negb in H.  destruct_match; try solve [congruence].
+  eapply PeanoNat.Nat.eqb_neq; eauto.
+  intros. unfold negb. destruct_match; try solve [reflexivity].
+  eapply PeanoNat.Nat.eqb_neq in H. rewrite H in matched. congruence.
+Qed.
+Hint Rewrite neqb_prop: deriv.
 
 (* Annotated - boolean version *)
 
@@ -227,15 +245,13 @@ Hint Rewrite wfb_prop wfsb_prop: deriv.
 
 (* Judgments *)
 Inductive Judgment_name :=
-| InferNat
-| InferBool
-| CheckBool
-| InferPP
-| InferPi1
-| InferPi2
-| InferIf
-| InferApp
-| InferLambda.
+| InferNat | InferMatch | CheckNat
+| InferBool | CheckBool | InferIf
+| InferPP | InferPi1 | InferPi2
+| InferApp | InferLambda
+| InferLeft | InferRight
+| InferSumMatch : tree -> Judgment_name
+.
 
 Inductive Judgment:=
 | J(name: Judgment_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment.
@@ -378,6 +394,21 @@ Proof.
   destruct_match; try solve [congruence]; eauto with sets.
 Qed.
 Hint Resolve support_fvar: sets.
+
+Lemma pfv_fvar: forall n tag, pfv (fvar n tag) tag = singleton n.
+Proof.
+  intros.
+  simpl.
+  destruct_match; try solve [congruence]; eauto with sets.
+Qed.
+
+Lemma pfv_fvar2: forall n, ((if tag_eq_dec term_var term_var then @singleton nat n else nil) = singleton n).
+Proof.
+  intros.
+  destruct_match; try solve [congruence]; eauto with sets.
+  Qed.
+Hint Rewrite pfv_fvar2: deriv.
+
 
 Lemma support_open : forall t1 t2 tag k A, subset (pfv (open k t1 t2) tag) A ->
                                       subset (pfv t2 tag) A ->

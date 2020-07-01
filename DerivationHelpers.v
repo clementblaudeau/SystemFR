@@ -417,3 +417,12 @@ Proof.
   induction t1; repeat steps || match goal with | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H end; eauto with sets ; apply subset_union2; eauto with eapply_any sets.
 Qed.
 Hint Resolve support_open: sets.
+
+
+Lemma support_open2 : forall t1 t2 tag (k: nat) A, subset (pfv t2 tag) A ->
+                                            subset (pfv t1 tag) A ->
+                                            subset (pfv (open k t1 t2) tag) A.
+Proof.
+  induction t1; repeat steps || apply subset_union3 || match goal with | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H end.
+Qed.
+Hint Resolve support_open2: sets.

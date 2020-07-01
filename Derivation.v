@@ -138,22 +138,74 @@ Fixpoint check_fv_context (Θ:list nat) Γ : bool :=
   end.
 
 
+Lemma ex_falso_quolibet : forall P, false = true  -> P.
+Proof.
+  intros.
+  congruence.
+Qed.
+Lemma trueAndTrue : True /\ True.
+Proof.
+  steps.
+Qed.
+
+Lemma inList1 : forall {T} n (l: list T), n ∈ n::l.
+Proof.
+  steps.
+Qed.
+
+Lemma inList2 : forall {T} n n0 (l: list T), n ∈ n0::n::l.
+Proof.
+  steps.
+Qed.
+
+Lemma inList3 : forall {T} n n0 n1 (l: list T), n ∈ n1::n0::n::l.
+Proof.
+  steps.
+Qed.
+
 Ltac inst_list_prop:=
+ match goal with
+  | H: forall x, x ∈ ?a1::nil ->  _ |- _ =>
+    pose proof (H a1 (inList1 a1 nil)); clear H
+  | H: forall x, x ∈ ?a1::?a2::nil -> _ |- _ =>
+    pose proof (H a1 (inList1 a1 _));
+    pose proof (H a2 (inList2 a2 a1 _)); clear H
+  | H: forall x, x ∈ ?a1::?a2::?a3::nil -> _ |- _ =>
+    pose proof (H a1 (inList1 a1 _) );
+    pose proof (H a2 (inList2 a2 a1 _) );
+    pose proof (H a3 (inList3 a3 a2 a1 _) ); clear H
+ end.
+
+Ltac modus_ponens :=
   match goal with
-  | H: forall x, x ∈ ?a1::nil -> _ |- _ => unshelve epose proof (H a1 _); clear H
-  | H: forall x, x ∈ ?a1::?a2::nil -> _ |- _ => unshelve epose proof (H a1 _); unshelve epose proof (H a2 _); clear H
-  | H: forall x, x ∈ ?a1::?a2::?a3::nil -> _ |- _ => unshelve epose proof (H a1 _); unshelve epose proof (H a2 _); unshelve epose proof (H a3 _); clear H
+  | H1: ?A , H2: ?A -> _ |- _ => pose proof (H2 H1) ; clear H2
   end.
 
+
+Ltac light_bool :=
+  match goal with
+  | H: _ |- _ => rewrite_strat hints bools in H
+  end || destruct_and.
+
+Ltac rewrite_deriv :=
+  match goal with
+  | H: _ |- _ => rewrite_strat outermost hints deriv in H
+  end.
+
+Ltac destruct_clear t H := destruct t; try apply (ex_falso_quolibet _ H).
 
 (* Conservation lemmas *)
 Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_tree (root dv)) 0 /\ wf (J_type (root dv)) 0.
 Proof.
   induction dv using derivation_ind.
   intros. unfold root, J_tree, J_type. unfold forallP in X.
-  unfold is_valid in H ;
-  (repeat subst || bools || destruct_and || autorewrite with deriv in * || inst_list_prop || invert_constructor_equalities || (destruct_match; try solve [congruence];  repeat fold is_valid in *) || intuition auto || simpl || match goal with |H: wf (_ _) _ |- _ => simpl in H end || eauto with cbn wf).
-   Qed.
+  destruct J. destruct name; destruct_clear t H.
+  (* Finish pattern matching deconstruction *)
+  all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
+  (* Apply induction hypothesis and do the rewrites *)
+  all: repeat subst || light_bool || match goal with | H: wf (_ _) _ |- _ => simpl in H end || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens ; simpl.
+  all: repeat split; eauto with wf.
+Qed.
 
 
 Lemma is_valid_wf_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf t 0.
@@ -170,39 +222,76 @@ Ltac basic_is_valid := repeat subst || bools || destruct_and || autorewrite with
 
 Ltac is_valid_support_ltac :=
   match goal with
-  | H: subset (pfv (T_arrow _ _) _) _ |- _ => simpl in H
-  | H: subset (pfv (T_sum _ _) _) _ |- _ => simpl in H
+  | H: subset (pfv (_ _ _) _) _ |- _ => simpl in H
   | H: subset _ (support (_::_)) |- _ => simpl in H
   | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H
   | H: _ |- subset ( _ ++ _ ) _ => apply subset_union2; eauto
   | _: ?x ∈ ?A -> False, H: subset ?A (?x::_) |- _ => apply subset_add3 in H; eauto
-  | H1: ?m ∈ (fv ?t) -> False, H2: ?n ∈ (fv ?t) -> False, H3: subset (pfv (open 0 ?t (fvar ?n term_var)) term_var) (?m :: ?n :: (support ?Γ)) |- subset (pfv ?t term_var) (support ?Γ) =>
+  | H1: ?m ∈ (fv ?t) -> False,
+        H2: ?n ∈ (fv ?t) -> False,
+            H3: subset (pfv (open 0 ?t (fvar ?n term_var)) term_var) (?m :: ?n :: (support ?Γ))
+    |- subset (pfv ?t term_var) (support ?Γ) =>
     apply (subset_add3 _ n _ _ H2) ;
     apply (subset_add3 _ m _ _ H1) ;
     apply (support_open t (fvar n term_var) term_var 0 (m::n::(support Γ)) H3) ;
     rewrite pfv_fvar ; eauto with sets
-  | H1: ?n ∈ (fv ?t) -> False, H2: subset (pfv (open 0 ?t (fvar ?n term_var)) term_var) (?n :: (support ?Γ)) |- subset (pfv ?t term_var) (support ?Γ) =>
+  |H: subset (fv (open ?k ?t1 ?t2)) _ |- _ => apply (support_open t1 t2 _) in H; clear H
+  | H1: ?n ∈ (fv ?t) -> False,
+        H2: subset (pfv (open 0 ?t (fvar ?n term_var)) term_var) (?n :: (support ?Γ))
+    |- subset (pfv ?t term_var) (support ?Γ) =>
     apply (subset_add3 _ n _ _ H1) ;
     apply (support_open t (fvar n term_var) term_var 0 (n::(support Γ)) H2) ;
     rewrite pfv_fvar ; eauto with sets
-  | H1: ?m ∈ (fv ?t) -> False, H2: ?n ∈ (fv ?t) -> False, H3: subset (pfv (open 0 ?t (?c (fvar ?n term_var))) term_var) (?m :: ?n :: (support ?Γ)) |- subset (pfv ?t term_var) (support ?Γ) =>
+  | H1: ?m ∈ (fv ?t) -> False,
+        H2: ?n ∈ (fv ?t) -> False,
+            H3: subset (pfv (open 0 ?t (?c (fvar ?n term_var))) term_var) (?m :: ?n :: (support ?Γ))
+    |- subset (pfv ?t term_var) (support ?Γ) =>
     apply (subset_add3 _ n _ _ H2) ;
     apply (subset_add3 _ m _ _ H1) ;
     apply (support_open t (c (fvar n term_var)) term_var 0 (m::n::(support Γ)) H3)
   | H:_ |- subset (pfv (open 0 ?t ?rep) term_var) ?A => apply (subset_transitive _ _ _ (fv_open _ _ _ _))
   end.
 
+Lemma subset_nil : forall {T} A, @subset T nil A.
+Proof.
+  steps.
+  eauto with sets.
+Qed.
 
-
+Lemma in_subset_not:
+  forall {T} (l1 l2: list T) (x: T),
+    subset l1 l2 -> not (x ∈ l2) -> not (x ∈ l1).
+Proof.
+  steps.
+Qed.
+Hint Resolve in_subset_not: sets.
+Hint Unfold fv: deriv.
 
 Lemma is_valid_support_term_aux : forall dv, is_valid dv = true -> subset (fv (J_tree (root dv)) ) (support (J_context (root dv))) /\ subset (fv (J_type (root dv)) ) (support (J_context (root dv))).
 Proof.
-  unfold fv.
   induction dv using derivation_ind.
-  intros.
-  unfold root, J_tree, J_type.
-  unfold forallP in X.
-  unfold is_valid in H ; repeat basic_is_valid ; eauto 2 using fv_open, subset_transitive, subset_union2 with sets;   repeat is_valid_support_ltac || basic_is_valid ; eauto 4 using fv_open, subset_transitive, subset_union2  with sets.
+  intros. unfold root, J_tree, J_type, fv. unfold forallP in X.
+  destruct J.
+  pose proof (subset_context_support Γ).
+  destruct name; destruct_clear t H.
+  (* Finish pattern matching deconstruction *)
+  all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
+  (* Apply induction hypothesis and do the rewrites *)
+  all: simpl; eauto 2 using subset_nil.
+  all: repeat subst || light_bool || rewrite_deriv || rewrite pfv_fvar || rewrite pfv_fvar2 ||
+              match goal with
+              | H1: ~ ?x ∈ ?A, H2: subset ?A (?x::?B) |- _ => apply (subset_add3 _ x A B H1) in H2
+              | H: subset (pfv (_ _ _) _) _ |- _ => simpl in H
+              | H: subset _ (support (_::_)) |- _ => simpl in H
+              | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H
+              | H: _ |- subset ( _ ++ _ ) _ => apply subset_union2; eauto
+              | H1: ~ ?n ∈ (fv_context ?Γ),
+                    H2: subset (support ?Γ) (fv_context ?Γ)
+                |- _ => apply (in_subset_not (support Γ) (fv_context Γ) n H2) in H1
+              | H: subset (fv (open ?k ?t1 ?t2)) ?A
+                |- subset (pfv ?t1 term_var) _ => apply (support_open t1 t2 term_var k A) in H
+              | H: subset( fv (_ _ _)) _ |- _ => cbn in H end
+       || invert_constructor_equalities || apply support_open2|| inst_list_prop || modus_ponens || simpl || split; eauto 2 using singleton_subset, inList1, inList2, inList3 with sets.
 Qed.
 
 
@@ -232,14 +321,6 @@ Ltac consume_is_valid :=
     epose proof (is_valid_support_T n Θ Γ t T c H) ; clear H
   end.
 
-Lemma in_subset_not:
-  forall {T} (l1 l2: list T) (x: T),
-    subset l1 l2 -> not (x ∈ l2) -> not (x ∈ l1).
-Proof.
-  steps.
-Qed.
-Hint Resolve in_subset_not: sets.
-Hint Unfold fv: deriv.
 
 Lemma subset_any_type: forall n Γ,  subset (pfv (fvar n term_var) term_var) (n :: @support nat tree Γ).
 Proof.
@@ -260,73 +341,39 @@ Ltac destruct_match_congruence := destruct_match ; try solve [bools; congruence]
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
 Proof.
   induction dv using derivation_ind.
-  intros.
-  unfold forallP in X.
-  unfold is_true. simpl.
-  destruct J eqn:HJ.
-  unfold is_valid in H ; repeat basic_is_valid; eauto 2 with deriv ;
-    repeat invert_constructor_equalities || inst_list_prop || consume_is_valid || match goal with | H: is_true (root (N _ _)) |- _ => simpl in H end || subst || intuition auto || subset_open || is_valid_support_ltac ||
-           match goal with
-           | H: subset (fv (open 0 ?t (fvar ?n term_var))) (?m :: ?n :: ?A) |- _ =>
-             apply (support_open _ (fvar n term_var) term_var 0 _) in H; eauto 2 with deriv sets
-           | H: wf (open _ _ _) _ |- _ => apply wf_open_rev in H
-           end ; eauto 3 with sets deriv.
-
-  eauto 3 with sets deriv.
-  apply (annotated_reducible_ite _ _ _ _ _ _ n); eauto 2 using support_open, wf_open_rev, subset_add3, subset_any_type with deriv sets cbn.
-  unfold fv.
-  unfold T_ite.
-  simpl.
-  unfold pfv.
-  eauto 3 with sets deriv.
-  eauto 3 with sets deriv.
-  eauto 3 with sets deriv.
-  eauto 3 with sets deriv.
-  eauto 3 with sets deriv.
-  eauto 3 with sets deriv.
-  eauto 3 with sets deriv.
-  eauto 3 with sets deriv.
-
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  apply (support_open _ (fvar _ term_var) term_var 0 _) in H20; eauto 2 with sets deriv.
-
-  admit.
-  simpl; eauto with sets deriv.
-  fold fv in H20.
-  is_valid_support_ltac.
-  admit.
-
-  match goal with | H: subset (fv (open ?k ?t (fvar ?n term_var))) (?m :: ?n :: ?A) |- _ => apply (support_open t (fvar ?n term_var) term_var k ((m :: n :: A))) in H end.
-
-match goal with | H: subset (fv (open ?k ?t (fvar ?n term_var))) (_ :: ?n :: ?A) |- _ => eapply support_open in H; eauto with sets end.
-
-
-
-
-
-  repeat eapply support_open; eauto.
-  repeat destruct_match_congruence ;
-    repeat subst || bools || destruct_and || autorewrite with deriv in * || invert_constructor_equalities || inst_list_prop || intuition auto || consume_is_valid || simpl.
-  ; eauto 2 using support_open, wf_open_rev, subset_add3, subset_any_type with deriv sets.
-  repeat match goal with | H: is_true (root (N _ _)) |- _ => simpl in H end.
-
-
-
-                                                                                                       || cbn in * || subset_open || is_valid_support_ltac  ;
-
-  apply (annotated_reducible_match Θ Γ _ _ _ _ n2 n); eauto 2 with sets.
-  apply PeanoNat.Nat.eqb_neq; eauto.
-  eauto 3 using wf_open_rev with deriv.
-  apply (subset_add3 _ n2 _ _ H6).
-  apply (subset_add3 _ n _ _ H12).
-  eapply support_open; eauto.
-  rewrite pfv_fvar; eauto with sets.
-  eauto 4 using support_open, wf_open_rev, subset_add3, subset_any_type with deriv sets.
+  intros. unfold root, J_tree, J_type, fv. unfold forallP in X.
+  destruct J.
+  pose proof (subset_context_support Γ).
+  destruct name; destruct_clear t H.
+  (* Finish pattern matching deconstruction *)
+  all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
+  (* Apply induction hypothesis and do the rewrites *)
+  all: repeat subst || light_bool || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens || simpl || consume_is_valid .
+  (* remove easy cases *)
+  all: eauto 2 with deriv.
+  all: repeat  match goal with | H: is_true (root _) |- _ => simpl in H end.
+  all: try apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3); eauto.
+  all: try apply (annotated_reducible_T_ite Θ Γ t1 t2 t3 T0 T1 n3); eauto.
+  all: try eapply annotated_reducible_pi1; eauto.
+  all: try eapply annotated_reducible_pi2; eauto.
+  all: try eapply (annotated_reducible_pp Θ Γ); eauto.
+  all: try eapply (annotated_reducible_app); eauto.
+  all: try eapply annotated_reducible_lambda; eauto.
+  all: try apply (annotated_reducible_sum_match Θ Γ t1 t2 t3 t4_1 t4_2 t0 n4 n3).
+  all: repeat destruct_and || assumption ||  match goal with
+              | H1: ~ ?x ∈ ?A, H2: subset ?A (?x::?B) |- _ => apply (subset_add3 _ x A B H1) in H2
+              | H: subset _ (support (_::_)) |- _ => simpl in H
+              | H1: subset ?A ?B,
+                    H2: subset ?B ?C,
+                        H3: ~?n ∈ ?C
+                |- ~ ?n ∈ ?A => apply (in_subset_not _ _ n (subset_transitive _ _ _ H1 H2) H3)
+              | H: subset (fv (open ?k ?t1 ?t2)) ?A
+                |- subset (fv ?t1) _ => apply (support_open t1 t2 term_var k A) in H
+              | H: wf (open _ _ _) _ |- _ => apply wf_open_rev in H
+              | H: wf (_ _ _) _ |- _ => simpl in H
+              | H: subset (fv (_ _ _)) _ |- _ => cbn in H; apply subset_union3 in H
+              | H: _ |- subset (singleton ?n) (?n :: _) => apply singleton_subset, inList1
+              | H: _ |- subset (singleton ?n) (_ :: ?n :: _) => apply singleton_subset, inList2
+              | H: _ |- subset (singleton ?n) (_ :: _ :: ?n :: _) => apply singleton_subset, inList3
+                                           end || rewrite pfv_fvar || rewrite pfv_fvar2 || simpl.
 Qed.

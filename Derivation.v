@@ -2,6 +2,9 @@ Require Export SystemFR.DerivationHelpers.
 Require Export SystemFR.Syntax.
 
 
+Reset Ltac Profile.
+Set Ltac Profiling.
+
 Fixpoint is_valid(dv: derivation) : bool :=
   match dv with
   (* | N (InferJudgment "InferUnit" _ _ uu T_unit) nil => true *)
@@ -131,6 +134,17 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (is_annotated_termb t1) && (is_annotated_termb t2)
     && (tree_eq T (open 0 B t1))
 
+  (* Var *)
+  | N (J InferVar _ Γ (fvar x term_var) T) nil =>
+    (option_tree_dec_eq (lookup PeanoNat.Nat.eq_dec Γ x) (Some T))
+    && (wfb T 0) && (subsetb (fv T) (support Γ))
+
+  (* Var - weaken *)
+  | N (J InferVarWeaken Θ ((x,T)::Γ) u U)
+      ((N ((J I1 _ _ _ _) as j1) _ as d1)::nil) =>
+    (j1 ?= (J I1 Θ Γ u U)) && (is_valid d1)
+    && (x ?∉ (support Γ)) && (x ?∉ (fv u)) && (x ?∉ (fv U)) && (x ?∉ Θ)
+
   | _ => false
   end.
 
@@ -210,68 +224,25 @@ Ltac rewrite_deriv :=
 
 Ltac destruct_clear t H := destruct t; try apply (ex_falso_quolibet _ H).
 
-(* Conservation lemmas *)
 Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_tree (root dv)) 0 /\ wf (J_type (root dv)) 0.
 Proof.
   induction dv using derivation_ind.
   intros. unfold root, J_tree, J_type. unfold forallP in X.
-  destruct J. destruct name; destruct_clear t H.
-  (* Finish pattern matching deconstruction *)
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
   all: repeat subst || light_bool || match goal with | H: wf (_ _) _ |- _ => simpl in H end || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens ; simpl.
   all: repeat split; eauto with wf.
 Qed.
 
-
 Lemma is_valid_wf_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf t 0.
-Proof.
-  intros; pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ); steps.
-Qed.
+Proof. intros; pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ); steps. Qed.
 
 Lemma is_valid_wf_T : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf T 0.
-Proof.
-  intros; pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ); steps.
-Qed.
-
-Ltac basic_is_valid := repeat subst || bools || destruct_and || autorewrite with deriv in * || inst_list_prop || invert_constructor_equalities || fold is_valid in * ||  (destruct_match; repeat fold is_valid in * ; try solve [congruence]) || intuition auto || simpl.
-
-Ltac is_valid_support_ltac :=
-  match goal with
-  | H: subset (pfv (_ _ _) _) _ |- _ => simpl in H
-  | H: subset _ (support (_::_)) |- _ => simpl in H
-  | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H
-  | H: _ |- subset ( _ ++ _ ) _ => apply subset_union2; eauto
-  | _: ?x ∈ ?A -> False, H: subset ?A (?x::_) |- _ => apply subset_add3 in H; eauto
-  | H1: ?m ∈ (fv ?t) -> False,
-        H2: ?n ∈ (fv ?t) -> False,
-            H3: subset (pfv (open 0 ?t (fvar ?n term_var)) term_var) (?m :: ?n :: (support ?Γ))
-    |- subset (pfv ?t term_var) (support ?Γ) =>
-    apply (subset_add3 _ n _ _ H2) ;
-    apply (subset_add3 _ m _ _ H1) ;
-    apply (support_open t (fvar n term_var) term_var 0 (m::n::(support Γ)) H3) ;
-    rewrite pfv_fvar ; eauto with sets
-  |H: subset (fv (open ?k ?t1 ?t2)) _ |- _ => apply (support_open t1 t2 _) in H; clear H
-  | H1: ?n ∈ (fv ?t) -> False,
-        H2: subset (pfv (open 0 ?t (fvar ?n term_var)) term_var) (?n :: (support ?Γ))
-    |- subset (pfv ?t term_var) (support ?Γ) =>
-    apply (subset_add3 _ n _ _ H1) ;
-    apply (support_open t (fvar n term_var) term_var 0 (n::(support Γ)) H2) ;
-    rewrite pfv_fvar ; eauto with sets
-  | H1: ?m ∈ (fv ?t) -> False,
-        H2: ?n ∈ (fv ?t) -> False,
-            H3: subset (pfv (open 0 ?t (?c (fvar ?n term_var))) term_var) (?m :: ?n :: (support ?Γ))
-    |- subset (pfv ?t term_var) (support ?Γ) =>
-    apply (subset_add3 _ n _ _ H2) ;
-    apply (subset_add3 _ m _ _ H1) ;
-    apply (support_open t (c (fvar n term_var)) term_var 0 (m::n::(support Γ)) H3)
-  | H:_ |- subset (pfv (open 0 ?t ?rep) term_var) ?A => apply (subset_transitive _ _ _ (fv_open _ _ _ _))
-  end.
+Proof. intros; pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ); steps. Qed.
 
 Lemma subset_nil : forall {T} A, @subset T nil A.
 Proof.
-  steps.
-  eauto with sets.
+  steps. eauto with sets.
 Qed.
 
 Lemma in_subset_not:
@@ -289,7 +260,6 @@ Proof.
   intros. unfold root, J_tree, J_type, fv. unfold forallP in X.
   destruct J.
   pose proof (subset_context_support Γ).
-  destruct name; destruct_clear t H.
   (* Finish pattern matching deconstruction *)
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
@@ -306,8 +276,10 @@ Proof.
                 |- _ => apply (in_subset_not (support Γ) (fv_context Γ) n H2) in H1
               | H: subset (fv (open ?k ?t1 ?t2)) ?A
                 |- subset (pfv ?t1 term_var) _ => apply (support_open t1 t2 term_var k A) in H
+              | H: ?x ∈ ?A |- subset (singleton ?x) ?A => apply singleton_subset; assumption
+              | H: lookup ?e ?A ?x = Some ?y |- _ => apply (@lookupSupport _ _ e A x y) in H
               | H: subset( fv (_ _ _)) _ |- _ => cbn in H end
-       || invert_constructor_equalities || apply support_open2|| inst_list_prop || modus_ponens || simpl || split; eauto 2 using singleton_subset, inList1, inList2, inList3 with sets.
+       || invert_constructor_equalities || apply support_open2|| inst_list_prop || modus_ponens || simpl || split; eauto 3 using singleton_subset, inList1, inList2, inList3 with sets.
 Qed.
 
 
@@ -351,34 +323,8 @@ Ltac subset_open :=
 Hint Extern 50 => eapply support_open: deriv.
 Hint Rewrite PeanoNat.Nat.eqb_neq: deriv.
 
-Ltac destruct_match_congruence := destruct_match ; try solve [bools; congruence].
-Require Import SystemFR.AnnotatedLet.
-
-(* Main soundess result *)
-Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
-Proof.
-  induction dv using derivation_ind.
-  intros. unfold root, J_tree, J_type, fv. unfold forallP in X.
-  destruct J.
-  pose proof (subset_context_support Γ).
-  destruct name; destruct_clear t H.
-  (* Finish pattern matching deconstruction *)
-  all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
-  (* Apply induction hypothesis and do the rewrites *)
-  all: repeat subst || light_bool || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens || simpl || consume_is_valid .
-  (* remove easy cases *)
-  all: eauto 2 with deriv.
-  all: repeat  match goal with | H: is_true (root _) |- _ => simpl in H end.
-  all: try apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3); eauto.
-  all: try apply (annotated_reducible_T_ite Θ Γ t1 t2 t3 T0 T1 n3); eauto.
-  all: try eapply annotated_reducible_pi1; eauto.
-  all: try eapply annotated_reducible_pi2; eauto.
-  all: try eapply (annotated_reducible_pp Θ Γ); eauto.
-  all: try eapply (annotated_reducible_app); eauto.
-  all: try eapply annotated_reducible_lambda; eauto.
-  all: try apply (annotated_reducible_sum_match Θ Γ t1 t2 t3 t4_1 t4_2 t0 n4 n3).
-  all: try apply (annotated_reducible_let Θ Γ _ _ n4 n3).
-  all: repeat destruct_and || assumption ||  match goal with
+Ltac soundness_finish :=
+  repeat destruct_and || assumption ||  match goal with
               | H1: ~ ?x ∈ ?A, H2: subset ?A (?x::?B) |- _ => apply (subset_add3 _ x A B H1) in H2
               | H: subset _ (support (_::_)) |- _ => simpl in H
               | H1: subset ?A ?B,
@@ -395,4 +341,32 @@ Proof.
               | H: _ |- subset (singleton ?n) (_ :: _ :: ?n :: _) => apply singleton_subset, inList3
                                            end || rewrite pfv_fvar || rewrite pfv_fvar2 || simpl.
 
+(* Main soundess result *)
+Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
+Proof.
+  induction dv using derivation_ind.
+  intros. unfold root, J_tree, J_type, fv. unfold forallP in X.
+  destruct J.
+  pose proof (subset_context_support Γ).
+  (* Finish pattern matching deconstruction *)
+  all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
+  (* Apply induction hypothesis and do the rewrites *)
+  all: repeat subst || light_bool || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens || simpl || consume_is_valid .
+  (* remove easy cases *)
+  all: eauto 2 with deriv.
+  all: repeat  match goal with | H: is_true (root _) |- _ => simpl in H end.
+  all: try
+   (apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3))
+   || (apply (annotated_reducible_T_ite Θ Γ t1 t2 t3 T0 T1 n3))
+   || (eapply annotated_reducible_pi1)
+   || (eapply annotated_reducible_pi2)
+   || (eapply (annotated_reducible_pp Θ Γ))
+   || (eapply (annotated_reducible_app))
+   || (eapply annotated_reducible_lambda)
+   || (apply (annotated_reducible_sum_match Θ Γ t1_1 t1_2 t1_3 t2_1 t2_2 t0  n4 n3))
+   || (apply (annotated_reducible_let Θ Γ _ _ n4 n3))
+   || (apply (annotated_reducible_T_ite Θ Γ t0_1 t0_2 t0_3 T0 T1 n3)) ; eauto ; soundness_finish.
+
 Qed.
+
+Show Ltac Profile.

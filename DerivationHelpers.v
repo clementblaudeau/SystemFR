@@ -6,7 +6,8 @@ Require Export SystemFR.AnnotatedIte.
 Require Export SystemFR.AnnotatedArrow.
 Require Export SystemFR.AnnotatedPair.
 Require Export SystemFR.AnnotatedSum.
-Require Import SystemFR.AnnotatedLet.
+Require Export SystemFR.AnnotatedLet.
+Require Export SystemFR.AnnotatedVar.
 Require Export SystemFR.AnnotatedAddEquality.
 
 
@@ -30,7 +31,12 @@ Hint Resolve annotated_reducible_pi2: deriv.
 Hint Resolve annotated_reducible_left: deriv.
 Hint Resolve annotated_reducible_right: deriv.
 Hint Resolve annotated_reducible_sum_match: deriv.
+Hint Resolve annotated_reducible_let: deriv.
+Hint Resolve annotated_reducible_var: deriv.
+Hint Resolve annotated_reducible_weaken: deriv.
+
 Hint Rewrite tree_eq_prop: deriv.
+
 
 
 
@@ -253,6 +259,7 @@ Inductive Judgment_name :=
 | InferLeft | InferRight
 | InferSumMatch : tree -> Judgment_name
 | InferLet : tree -> Judgment_name
+| InferVar | InferVarWeaken
 .
 
 Inductive Judgment:=
@@ -349,6 +356,19 @@ Proof.
   steps.
 Qed.
 Hint Rewrite Judgment_eq_prop: deriv.
+
+Definition option_dec: forall X (x y : option X), decidable X -> {x = y} + {x <> y}.
+  intros.
+  decide equality.
+Qed.
+Definition option_tree_dec_eq t1 t2 := if (option_dec tree t1 t2 tree_eq_dec) then true else false.
+Definition option_tree_dec_eq_prop : forall t1 t2, (option_tree_dec_eq t1 t2 = true) <-> (t1 = t2).
+Proof.
+  unfold option_tree_dec_eq. steps.
+Qed.
+
+Hint Rewrite option_tree_dec_eq_prop: deriv.
+
 
 
 (* Boolean set inclusion definitions and lemmas *)

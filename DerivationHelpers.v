@@ -6,6 +6,7 @@ Require Export SystemFR.AnnotatedIte.
 Require Export SystemFR.AnnotatedArrow.
 Require Export SystemFR.AnnotatedPair.
 Require Export SystemFR.AnnotatedSum.
+Require Import SystemFR.AnnotatedLet.
 Require Export SystemFR.AnnotatedAddEquality.
 
 
@@ -251,6 +252,7 @@ Inductive Judgment_name :=
 | InferApp | InferLambda
 | InferLeft | InferRight
 | InferSumMatch : tree -> Judgment_name
+| InferLet : tree -> Judgment_name
 .
 
 Inductive Judgment:=

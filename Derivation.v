@@ -114,6 +114,22 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && is_annotated_typeb V
     && (tree_eq T (T_arrow U V))
 
+  (* tlet *)
+  | N (J (InferLet B) Θ Γ (tlet t1 A t2) T)
+      ((N ((J I1 _ _ _ _) as j1) _ as d1)
+         :: (N ((J I2 _ ((p, _)::(x,_)::_) _ _) as j2) _ as d2) :: nil) =>
+    (j1 ?= (J I1 Θ Γ t1 A)) && (is_valid d1)
+    && (j2 ?= (J I2 Θ ((p, T_equiv (fvar x term_var) t1)::(x,A)::Γ) (open 0 t2 (fvar x term_var)) (open 0 B (fvar x term_var)))) && (is_valid d2)
+    && (x ?∉ (fv_context Γ)) && (p ?∉ (fv_context Γ))
+    && (x ?<> p)
+    && (x ?∉ (fv t2)) && (p ?∉ (fv t2))
+    && (x ?∉ (fv B)) && (p ?∉ (fv B))
+    && (x ?∉ (fv A)) && (p ?∉ (fv A))
+    && (x ?∉ (fv t1)) && (p ?∉ (fv t1))
+    && (x ?∉ Θ) && (p ?∉ Θ)
+    && (is_annotated_typeb B)
+    && (is_annotated_termb t1) && (is_annotated_termb t2)
+    && (tree_eq T (open 0 B t1))
 
   | _ => false
   end.
@@ -336,6 +352,7 @@ Hint Extern 50 => eapply support_open: deriv.
 Hint Rewrite PeanoNat.Nat.eqb_neq: deriv.
 
 Ltac destruct_match_congruence := destruct_match ; try solve [bools; congruence].
+Require Import SystemFR.AnnotatedLet.
 
 (* Main soundess result *)
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
@@ -360,6 +377,7 @@ Proof.
   all: try eapply (annotated_reducible_app); eauto.
   all: try eapply annotated_reducible_lambda; eauto.
   all: try apply (annotated_reducible_sum_match Θ Γ t1 t2 t3 t4_1 t4_2 t0 n4 n3).
+  all: try apply (annotated_reducible_let Θ Γ _ _ n4 n3).
   all: repeat destruct_and || assumption ||  match goal with
               | H1: ~ ?x ∈ ?A, H2: subset ?A (?x::?B) |- _ => apply (subset_add3 _ x A B H1) in H2
               | H: subset _ (support (_::_)) |- _ => simpl in H
@@ -376,4 +394,5 @@ Proof.
               | H: _ |- subset (singleton ?n) (_ :: ?n :: _) => apply singleton_subset, inList2
               | H: _ |- subset (singleton ?n) (_ :: _ :: ?n :: _) => apply singleton_subset, inList3
                                            end || rewrite pfv_fvar || rewrite pfv_fvar2 || simpl.
+
 Qed.

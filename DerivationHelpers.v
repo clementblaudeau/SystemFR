@@ -9,6 +9,7 @@ Require Export SystemFR.AnnotatedSum.
 Require Export SystemFR.AnnotatedLet.
 Require Export SystemFR.AnnotatedVar.
 Require Export SystemFR.AnnotatedAddEquality.
+Require Export SystemFR.AnnotatedFix.
 
 
 Import Coq.Strings.String.
@@ -260,7 +261,7 @@ Inductive Judgment_name :=
 | InferSumMatch : tree -> Judgment_name
 | InferLet : tree -> Judgment_name
 | InferVar | InferVarWeaken
-.
+| InferFix.
 
 Inductive Judgment:=
 | J(name: Judgment_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment.
@@ -448,3 +449,23 @@ Proof.
   induction t1; repeat steps || apply subset_union3 || match goal with | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H end.
 Qed.
 Hint Resolve support_open2: sets.
+
+Require Import Coq.Lists.List.
+
+Fixpoint NoDupb l : bool :=
+  match l with
+  | nil => true
+  | x::l' => (x ?∉ l') && (NoDupb l')
+  end.
+
+Lemma NoDupb_prop : forall l, (NoDup l) <-> (NoDupb l = true).
+Proof.
+  induction l.
+  steps.
+  rewrite NoDup_cons_iff.
+  simpl.
+  rewrite IHl.
+  bools.
+  rewrite Inb_prop3.
+  reflexivity.
+Qed.

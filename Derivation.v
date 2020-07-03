@@ -1,5 +1,7 @@
 Require Export SystemFR.DerivationHelpers.
 Require Export SystemFR.Syntax.
+Require Export SystemFR.Evaluator.
+Require Export SystemFR.NatLessThanErase.
 
 
 Reset Ltac Profile.
@@ -145,6 +147,23 @@ Fixpoint is_valid(dv: derivation) : bool :=
     (j1 ?= (J I1 Θ Γ u U)) && (is_valid d1)
     && (x ?∉ (support Γ)) && (x ?∉ (fv u)) && (x ?∉ (fv U)) && (x ?∉ Θ)
 
+  (* Fix *)
+  | N (J InferFix Θ Γ (tfix T ts) (T_forall T_nat T'))
+      ((N ((J I1 _ ((p, _)::(y, _)::(n, _)::_) _ _) as j1) _ as d1) :: nil) =>
+    (tree_eq T T')
+    && (j1 ?= (J I1 Θ ((p, T_equiv (fvar y term_var) (tfix T ts))
+                         ::(y, T_forall (T_refine T_nat (annotated_tlt (lvar 0 term_var) (fvar n term_var))) T)
+                         ::(n, T_nat)::Γ)
+                 (open 0 (open 1 ts (fvar n term_var)) (fvar y term_var))
+                 (open 0 T (fvar n term_var))))
+    && (isValue (erase_term ts)) && (is_valid d1)
+    && (n ?∉ (fv_context Γ)) && (y ?∉ (fv_context Γ)) && (p ?∉ (fv_context Γ))
+    && (n ?∉ (fv T)) && (y ?∉ (fv T)) && (p ?∉ (fv T))
+    && (n ?∉ (fv ts)) && (y ?∉ (fv ts)) && (p ?∉ (fv ts))
+    && (n ?∉ Θ) && (y ?∉ Θ) && (p ?∉ Θ)
+    && (NoDupb (n::y::p::nil)) && (wfb (erase_term ts) 1) && (wfb ts 1)
+    && (is_annotated_termb ts) && (is_annotated_typeb T)
+
   | _ => false
   end.
 
@@ -254,6 +273,28 @@ Qed.
 Hint Resolve in_subset_not: sets.
 Hint Unfold fv: deriv.
 
+Lemma subset_open_open: forall k1 k2 t n3 n2 n1 A,
+    subset (fv (open k1 (open k2 t (fvar n3 term_var)) (fvar n2 term_var))) (n1::n2::n3::A) ->
+    ~ n3 ∈ (fv t) ->
+    ~ n2 ∈ (fv t) ->
+    ~ n1 ∈ (fv t) ->
+    subset (fv t) A.
+  intros.
+  apply (subset_add5 _ n1 n2 n3 _ _ H2 H1 H0).
+  pose proof (proj2
+                (iff_and (singleton_subset (n1::n2::n3::A) n2))
+                (inList2 n2 n1 (n3::A))) as H_temp1.
+  pose proof (proj2
+                (iff_and (singleton_subset (n1::n2::n3::A) n3))
+                (inList3 n3 n2 n1 (A))) as H_temp2.
+  rewrite <- (pfv_fvar n2 term_var) in H_temp1.
+  rewrite <- (pfv_fvar n3 term_var) in H_temp2.
+  pose proof (support_open (open k2 t (fvar n3 term_var)) (fvar n2 term_var) term_var k1 _ H H_temp1) as H_temp3.
+  apply (support_open t (fvar n3 term_var) term_var k2 (n1::n2::n3::A) H_temp3 H_temp2).
+Qed.
+
+
+
 Lemma is_valid_support_term_aux : forall dv, is_valid dv = true -> subset (fv (J_tree (root dv)) ) (support (J_context (root dv))) /\ subset (fv (J_type (root dv)) ) (support (J_context (root dv))).
 Proof.
   induction dv using derivation_ind.
@@ -278,27 +319,32 @@ Proof.
                 |- subset (pfv ?t1 term_var) _ => apply (support_open t1 t2 term_var k A) in H
               | H: ?x ∈ ?A |- subset (singleton ?x) ?A => apply singleton_subset; assumption
               | H: lookup ?e ?A ?x = Some ?y |- _ => apply (@lookupSupport _ _ e A x y) in H
-              | H: subset( fv (_ _ _)) _ |- _ => cbn in H end
+              | H: _ |- subset (singleton ?n) (?n :: _) => apply singleton_subset, inList1
+              | H: _ |- subset (singleton ?n) (_ :: ?n :: _) => apply singleton_subset, inList2
+              | H: _ |- subset (singleton ?n) (_ :: _ :: ?n :: _) => apply singleton_subset, inList3
+              | H: subset (fv (open ?k1 (open ?k2 ?t (fvar ?n3 term_var)) (fvar ?n2 term_var))) (?n1::?n2::?n3::?A),
+                   H1: ~ ?n3 ∈ (fv ?t),
+                       H2: ~ ?n2 ∈ (fv ?t),
+                           H3: ~ ?n1 ∈ (fv ?t)
+                |- subset (pfv ?t term_var) ?A  => apply (subset_open_open k1 k2 t n3 n2 n1 A H H1 H2 H3)
+            | H: subset( fv (_ _ _)) _ |- _ => cbn in H end
+
        || invert_constructor_equalities || apply support_open2|| inst_list_prop || modus_ponens || simpl || split; eauto 3 using singleton_subset, inList1, inList2, inList3 with sets.
 Qed.
 
 
 Lemma is_valid_support_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> subset (fv t) (support Γ).
-Proof.
-  intros.
-  pose proof (is_valid_support_term_aux  (N (J n Θ Γ t T) c) H ). steps.
-Qed.
+Proof. intros. pose proof (is_valid_support_term_aux  (N (J n Θ Γ t T) c) H ). steps. Qed.
 Hint Resolve is_valid_support_t: deriv.
+
 Lemma is_valid_support_T : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> subset (fv T) (support Γ).
-Proof.
-  intros.
-  pose proof (is_valid_support_term_aux  (N (J n Θ Γ t T) c) H ). steps.
-Qed.
+Proof. intros. pose proof (is_valid_support_term_aux  (N (J n Θ Γ t T) c) H ). steps. Qed.
 Hint Resolve is_valid_support_T: deriv.
 
 
 Hint Resolve is_valid_wf_t: deriv.
 Hint Resolve is_valid_wf_T: deriv.
+
 
 Ltac consume_is_valid :=
   match goal with
@@ -335,12 +381,23 @@ Ltac soundness_finish :=
                 |- subset (fv ?t1) _ => apply (support_open t1 t2 term_var k A) in H
               | H: wf (open _ _ _) _ |- _ => apply wf_open_rev in H
               | H: wf (_ _ _) _ |- _ => simpl in H
+              | H: NoDupb ?L |- List.NoDup ?L => apply NoDupb_prop
               | H: subset (fv (_ _ _)) _ |- _ => cbn in H; apply subset_union3 in H
               | H: _ |- subset (singleton ?n) (?n :: _) => apply singleton_subset, inList1
+              | H: ~ ?a ∈ ?L |- List.NoDup (?a::?L) => apply (List.NoDup_cons a H)
+              | H:_ |- List.NoDup (?a::nil) => apply (List.NoDup_cons a (@List.in_nil _ a))
+              | H:_ |- List.NoDup nil => apply List.NoDup_nil
               | H: _ |- subset (singleton ?n) (_ :: ?n :: _) => apply singleton_subset, inList2
               | H: _ |- subset (singleton ?n) (_ :: _ :: ?n :: _) => apply singleton_subset, inList3
-                                           end || rewrite pfv_fvar || rewrite pfv_fvar2 || simpl.
+              | H: subset (fv (open ?k1 (open ?k2 ?t (fvar ?n3 term_var)) (fvar ?n2 term_var))) (?n1::?n2::?n3::?A),
+                   H1: ~ ?n3 ∈ (fv ?t),
+                       H2: ~ ?n2 ∈ (fv ?t),
+                           H3: ~ ?n1 ∈ (fv ?t)
+                |- subset (pfv ?t term_var) ?A  => apply (subset_open_open k1 k2 t n3 n2 n1 A H H1 H2 H3)
+                                      end || rewrite pfv_fvar || rewrite pfv_fvar2 || simpl || unfold fv || rewrite_deriv.
 
+
+Hint Rewrite isValueCorrect: deriv.
 (* Main soundess result *)
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
 Proof.
@@ -365,7 +422,8 @@ Proof.
    || (eapply annotated_reducible_lambda)
    || (apply (annotated_reducible_sum_match Θ Γ t1_1 t1_2 t1_3 t2_1 t2_2 t0  n4 n3))
    || (apply (annotated_reducible_let Θ Γ _ _ n4 n3))
-   || (apply (annotated_reducible_T_ite Θ Γ t0_1 t0_2 t0_3 T0 T1 n3)) ; eauto ; soundness_finish.
+   || (apply (annotated_reducible_T_ite Θ Γ t0_1 t0_2 t0_3 T0 T1 n3))
+   || ( apply (annotated_reducible_fix_strong_induction Θ Γ t0_2 t0_4 n3 n2 n1) ; eauto using isValueCorrect) ; eauto ; soundness_finish.
 
 Qed.
 

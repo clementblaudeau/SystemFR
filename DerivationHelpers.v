@@ -253,15 +253,26 @@ Hint Rewrite wfb_prop wfsb_prop: deriv.
 
 (* Judgments *)
 Inductive Judgment_name :=
-| InferNat | InferMatch | CheckNat
-| InferBool | CheckBool | InferIf
-| InferPP | InferPi1 | InferPi2
-| InferApp | InferLambda
-| InferLeft | InferRight
-| InferSumMatch : tree -> Judgment_name
-| InferLet : tree -> Judgment_name
-| InferVar | InferVarWeaken
-| InferFix.
+| J_Nat
+| J_Match
+
+| J_Bool
+| J_If
+
+| J_PP
+| J_Pi1 | J_Pi2
+
+| J_App
+| J_Lambda
+
+| J_Left | J_Right
+| J_SumMatch : tree -> Judgment_name
+
+| J_Let : tree -> Judgment_name
+
+| J_Var | J_VarWeaken
+
+| J_Fix.
 
 Inductive Judgment:=
 | J(name: Judgment_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment.
@@ -337,7 +348,7 @@ Qed.
 Definition context_eq_dec: forall (x y : context), {x = y} + {x <> y}.
 Proof.
   repeat decide equality || apply tree_eq_dec.
-Qed.
+Defined.
 Definition context_eq c1 c2 : bool := if (context_eq_dec c1 c2) then true else false.
 Definition list_nat_eq_dec : forall (x y : list nat), {x = y} + {x <> y}.
 Proof.
@@ -345,9 +356,25 @@ Proof.
 Qed.
 
 (* Decidable equality for Judgments *)
+Definition Judgment_name_eq_dec: forall (x y: Judgment_name), {x = y} + {x <> y}.
+Proof.
+  decide equality; apply tree_eq_dec.
+(*
+  destruct x, y; try solve [(left; reflexivity) | (right; congruence)].
+  all: destruct( tree_eq_dec t t0) as [H | H].
+  all: try solve [ left; rewrite H; reflexivity ].
+  all: try solve [right; congruence]. *)
+Defined.
+
+Compute (Judgment_name_eq_dec (J_Let zero) J_Nat).
+
 Definition Judgment_eq_dec : forall (x y : Judgment), {x = y} + {x <> y}.
 Proof.
-  repeat decide equality. Qed.
+  intros.
+  induction x. destruct y.
+  decide equality; try apply tree_eq_dec || apply context_eq_dec || apply Judgment_name_eq_dec || apply (list_eqdec (nat_eqdec)).
+Defined.
+
 Definition Judgment_eq j1 j2 : bool := if (Judgment_eq_dec j1 j2) then true else false.
 Notation "j1 ?= j2" := (Judgment_eq j1 j2) (at level 70, j2 at next level).
 
@@ -360,8 +387,11 @@ Hint Rewrite Judgment_eq_prop: deriv.
 
 Definition option_dec: forall X (x y : option X), decidable X -> {x = y} + {x <> y}.
   intros.
+  unfold decidable in *.
+  destruct x, y;
   decide equality.
-Qed.
+Defined.
+
 Definition option_tree_dec_eq t1 t2 := if (option_dec tree t1 t2 tree_eq_dec) then true else false.
 Definition option_tree_dec_eq_prop : forall t1 t2, (option_tree_dec_eq t1 t2 = true) <-> (t1 = t2).
 Proof.

@@ -91,8 +91,9 @@ Inductive tree: Set :=
 Definition fv_tag_dec : forall (x y : fv_tag), {x = y} + {x <> y}.
 Proof.
   intros.
-  decide equality.
-  Defined.
+  destruct x, y; try solve [(left; reflexivity) || (right; congruence)].
+Defined.
+
 Definition tree_eq_dec : forall (x y : tree), {x = y} + {x <> y}.
 Proof.
   repeat decide equality || apply fv_tag_dec.

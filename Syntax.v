@@ -12,8 +12,8 @@ Lemma tag_eq_dec:
   forall tag1 tag2: fv_tag, { tag1 = tag2 } + { tag1 <> tag2 }.
 Proof.
   intros.
-  decide equality.
-Qed.
+  destruct tag1, tag2; try solve [(left; reflexivity) || (right; congruence)].
+Defined.
 
 Fixpoint pfv t tag: list nat :=
   match t with

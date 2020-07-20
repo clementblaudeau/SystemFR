@@ -35,11 +35,11 @@ Fixpoint is_valid(dv: derivation) : bool :=
 
   (* If then else *)
   | N (J J_If Θ Γ (ite b t1 t2) T)
-      ((N jb _ as db)
+      ((N (J Ic _ _ _ _ as jb) _ as db)
          ::(N ((J I1 _ ((x,Te1)::_) _ T1) as j1) _ as d1)
          ::(N ((J I2 _ ((_,Te2)::_) _ T2) as j2) _ as d2)
          ::nil) =>
-    (jb ?= (J J_Bool Θ Γ b T_bool)) && (is_valid db) (* Changer ça *)
+    (jb ?= (J Ic Θ Γ b T_bool)) && (is_valid db)
     && (j1 ?= (J I1 Θ ((x, T_equiv b ttrue)::Γ) t1 T1)) && (is_valid d1)
     && (j2 ?= (J I2 Θ ((x, T_equiv b tfalse)::Γ) t2 T2)) && (is_valid d2)
     && tree_eq T (T_ite b T1 T2)
@@ -413,7 +413,7 @@ Proof.
   all: repeat  match goal with | H: is_true (root _) |- _ => simpl in H end.
   all: try
    (apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3))
-   || (apply (annotated_reducible_T_ite Θ Γ t1 t2 t3 T0 T1 n3))
+   || (apply (annotated_reducible_T_ite Θ Γ t0_1 t0_2 t0_3 T1 T2 n3))
    || (eapply annotated_reducible_pi1)
    || (eapply annotated_reducible_pi2)
    || (eapply (annotated_reducible_pp Θ Γ))
@@ -422,8 +422,7 @@ Proof.
    || (apply (annotated_reducible_sum_match Θ Γ t1_1 t1_2 t1_3 t2_1 t2_2 t0  n4 n3))
    || (apply (annotated_reducible_let Θ Γ _ _ n4 n3))
    || (apply (annotated_reducible_T_ite Θ Γ t0_1 t0_2 t0_3 T0 T1 n3))
-   || ( apply (annotated_reducible_fix_strong_induction Θ Γ t0_2 t0_4 n3 n2 n1) ; eauto using isValueCorrect) ; eauto ; soundness_finish.
-
+       || ( apply (annotated_reducible_fix_strong_induction Θ Γ t0_2 t0_4 n3 n2 n1) ; eauto using isValueCorrect) ; eauto ; soundness_finish.
 Qed.
 
 Show Ltac Profile.

@@ -252,7 +252,7 @@ Qed.
 Hint Rewrite wfb_prop wfsb_prop: deriv.
 
 (* Judgments *)
-Inductive Judgment_name :=
+Inductive TJ_name :=
 | J_Nat
 | J_Match
 
@@ -266,25 +266,48 @@ Inductive Judgment_name :=
 | J_Lambda
 
 | J_Left | J_Right
-| J_SumMatch : tree -> Judgment_name
+| J_SumMatch : tree -> TJ_name
 
-| J_Let : tree -> Judgment_name
+| J_Let : tree -> TJ_name
 
 | J_Var | J_VarWeaken
 
 | J_Fix.
 
+Inductive StJ_name :=
+| StJ_sub.
+
+Inductive EJ_name :=
+| EJ_trans
+.
+
 Inductive Judgment:=
-| J(name: Judgment_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment.
+| TJ(name: TJ_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment
+| StJ(name: StJ_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment
+| EJ(name: StJ_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment
+.
 
-Definition J_tree dv :=
-  match dv with | J _ _ _ t _ => t end.
-Definition J_type dv :=
-  match dv with | J _ _ _ _ T => T end.
+
+Definition is_true (j: Judgment) : Prop :=
+  match j with
+  | TJ _ Θ Γ t T => [[ Θ; Γ ⊨ t : T ]]
+  | StJ _ Θ Γ t T => [[ Θ; Γ ⊨ t <: T ]]
+  | EJ _ Θ Γ t t' => [[ Θ; Γ ⊨ t ≡ t' ]]
+  end.
+
+
+Definition J_term1 dv :=
+  match dv with
+   | TJ _ _ _ t _ | StJ _ _ _ t _ | EJ _ _ _ t _ => t
+  end.
+Definition J_term2 dv :=
+  match dv with
+   | TJ _ _ _ _ t | StJ _ _ _ _ t | EJ _ _ _ _ t => t
+  end.
 Definition J_context dv :=
-  match dv with | J _ _ Γ _ _ => Γ end.
-
-Definition is_true (j: Judgment) : Prop := match j with | J _ Θ Γ t T => [[ Θ; Γ ⊨ t : T ]] end.
+  match dv with
+  | TJ _ _ Γ _ _ | StJ _ _ Γ _ _ | EJ _ _ Γ _ _ => Γ
+  end.
 
 (* Derivation trees *)
 Inductive NodeTree (T:Type) :=
@@ -300,10 +323,11 @@ Definition children {T} nt : (list (NodeTree T)) :=
   | N _ c => c
   end.
 
-Lemma J_tree_root : forall n Θ Γ t T c, J_tree (root (N (J n Θ Γ t T) c)) = t. Proof. steps. Qed.
-Lemma J_type_root : forall n Θ Γ t T c, J_type (root (N (J n Θ Γ t T) c)) = T. Proof. steps. Qed.
-Lemma J_context_root : forall n Θ Γ t T c, J_context (root (N (J n Θ Γ t T) c)) = Γ. Proof. steps. Qed.
-Hint Rewrite J_tree_root J_type_root  J_context_root: deriv.
+
+Lemma TJ_term1_root : forall n Θ Γ t T c, J_term1 (root (N (TJ n Θ Γ t T) c)) = t. Proof. steps. Qed.
+Lemma TJ_term2_root : forall n Θ Γ t T c, J_term2 (root (N (TJ n Θ Γ t T) c)) = T. Proof. steps. Qed.
+Lemma TJ_context_root : forall n Θ Γ t T c, J_context (root (N (TJ n Θ Γ t T) c)) = Γ. Proof. steps. Qed.
+Hint Rewrite TJ_term1_root TJ_term2_root TJ_context_root: deriv.
 
 Definition derivation := NodeTree Judgment.
 
@@ -356,23 +380,36 @@ Proof.
 Qed.
 
 (* Decidable equality for Judgments *)
-Definition Judgment_name_eq_dec: forall (x y: Judgment_name), {x = y} + {x <> y}.
+Definition TJ_name_eq_dec: forall (x y: TJ_name), {x = y} + {x <> y}.
 Proof.
   decide equality; apply tree_eq_dec.
-(*
-  destruct x, y; try solve [(left; reflexivity) | (right; congruence)].
-  all: destruct( tree_eq_dec t t0) as [H | H].
-  all: try solve [ left; rewrite H; reflexivity ].
-  all: try solve [right; congruence]. *)
 Defined.
-
-Compute (Judgment_name_eq_dec (J_Let zero) J_Nat).
+Definition StJ_name_eq_dec: forall (x y: StJ_name), {x = y} + {x <> y}.
+Proof.
+  intros.
+  destruct x, y.
+  decide equality.
+Defined.
+Definition EJ_name_eq_dec: forall (x y: EJ_name), {x = y} + {x <> y}.
+Proof.
+  intros.
+  destruct x, y.
+  decide equality.
+Defined.
 
 Definition Judgment_eq_dec : forall (x y : Judgment), {x = y} + {x <> y}.
 Proof.
   intros.
-  induction x. destruct y.
-  decide equality; try apply tree_eq_dec || apply context_eq_dec || apply Judgment_name_eq_dec || apply (list_eqdec (nat_eqdec)).
+  induction x; destruct y;
+  decide equality;
+    try apply tree_eq_dec ||
+        apply context_eq_dec ||
+        apply TJ_name_eq_dec ||
+        apply StJ_name_eq_dec ||
+        apply EJ_name_eq_dec ||
+        apply (list_eqdec (nat_eqdec)) ||
+        (right; discriminate) ||
+        (left; reflexivity).
 Defined.
 
 Definition Judgment_eq j1 j2 : bool := if (Judgment_eq_dec j1 j2) then true else false.
@@ -444,7 +481,9 @@ Lemma support_fvar : forall n U Γ, subset (pfv (fvar n term_var) term_var) (@su
 Proof.
   intros.
   simpl.
-  destruct_match; try solve [congruence]; eauto with sets.
+  sets.
+  unfold List.In.
+  eauto.
 Qed.
 Hint Resolve support_fvar: sets.
 

@@ -12,21 +12,21 @@ Fixpoint is_valid(dv: derivation) : bool :=
   (* | N (InferJudgment "InferUnit" _ _ uu T_unit) nil => true *)
 
   (* Bools *)
-  | N (J J_Bool _ _ ttrue T_bool) nil => true
-  | N (J J_Bool _ _ tfalse T_bool) nil => true
+  | N (TJ J_Bool _ _ ttrue T_bool) nil => true
+  | N (TJ J_Bool _ _ tfalse T_bool) nil => true
 
   (* Naturals *)
-  | N (J J_Nat _ _ zero T_nat) nil => true
-  | N (J J_Nat Θ Γ (succ t) T_nat) (N (J I0 _ _ _ T_nat as j) _ as dv' ::nil) =>
-    (j ?= (J I0 Θ Γ t T_nat)) && (is_valid dv')
-  | N (J J_Match Θ Γ (tmatch tn t0 ts) T)
+  | N (TJ J_Nat _ _ zero T_nat) nil => true
+  | N (TJ J_Nat Θ Γ (succ t) T_nat) (N (TJ I0 _ _ _ T_nat as j) _ as dv' ::nil) =>
+    (j ?= (TJ I0 Θ Γ t T_nat)) && (is_valid dv')
+  | N (TJ J_Match Θ Γ (tmatch tn t0 ts) T)
       ((N jn nil as dn)
-         ::(N ((J I0 _ ((p, _)::_) _ _) as j0) _ as d0)
-         ::(N ((J Is _ ((_,_)::(n,_)::_) _ _) as js) _ as ds)
+         ::(N ((TJ I0 _ ((p, _)::_) _ _) as j0) _ as d0)
+         ::(N ((TJ Is _ ((_,_)::(n,_)::_) _ _) as js) _ as ds)
          ::nil) =>
-    (jn ?= (J J_Nat Θ Γ tn T_nat)) && (is_valid dn)
-    && (j0 ?= (J I0 Θ ((p, T_equiv tn zero)::Γ) t0 T)) && (is_valid d0)
-    && (js ?= (J Is Θ ((p, T_equiv tn (succ (fvar n term_var)))::(n, T_nat)::Γ) (open 0 ts (fvar n term_var)) T))
+    (jn ?= (TJ J_Nat Θ Γ tn T_nat)) && (is_valid dn)
+    && (j0 ?= (TJ I0 Θ ((p, T_equiv tn zero)::Γ) t0 T)) && (is_valid d0)
+    && (js ?= (TJ Is Θ ((p, T_equiv tn (succ (fvar n term_var)))::(n, T_nat)::Γ) (open 0 ts (fvar n term_var)) T))
     && (is_valid ds)
     && (p ?∉ (fv ts)) && (p ?∉ (fv t0)) && (p ?∉ (fv tn)) && (p ?∉ (fv T)) && (p ?∉ (fv_context Γ))
     && (n ?∉ (fv tn)) && (n ?∉ (fv ts)) && (n ?∉ (fv T)) && (n ?∉ (fv_context Γ))
@@ -34,27 +34,27 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (is_annotated_termb ts)
 
   (* If then else *)
-  | N (J J_If Θ Γ (ite b t1 t2) T)
-      ((N (J Ic _ _ _ _ as jb) _ as db)
-         ::(N ((J I1 _ ((x,(T_equiv _ ttrue))::_) _ T1) as j1) _ as d1)
-         ::(N ((J I2 _ ((_,(T_equiv _ tfalse))::_) _ T2) as j2) _ as d2)
+  | N (TJ J_If Θ Γ (ite b t1 t2) T)
+      ((N (TJ Ic _ _ _ _ as jb) _ as db)
+         ::(N ((TJ I1 _ ((x,(T_equiv _ ttrue))::_) _ T1) as j1) _ as d1)
+         ::(N ((TJ I2 _ ((_,(T_equiv _ tfalse))::_) _ T2) as j2) _ as d2)
          ::nil) =>
-    (jb ?= (J Ic Θ Γ b T_bool)) && (is_valid db)
+    (jb ?= (TJ Ic Θ Γ b T_bool)) && (is_valid db)
     && (x ?∉ (fv_context Γ))
     && (x ?∉ Θ )
     && (x ?∉ (fv t1))
     && (x ?∉ (fv t2)) &&
     if (tree_eq T (T_ite b T1 T2)) then (
         (* Type unification *)
-        (j1 ?= (J I1 Θ ((x, T_equiv b ttrue)::Γ) t1 T1)) && (is_valid d1)
-        && (j2 ?= (J I2 Θ ((x, T_equiv b tfalse)::Γ) t2 T2)) && (is_valid d2)
+        (j1 ?= (TJ I1 Θ ((x, T_equiv b ttrue)::Γ) t1 T1)) && (is_valid d1)
+        && (j2 ?= (TJ I2 Θ ((x, T_equiv b tfalse)::Γ) t2 T2)) && (is_valid d2)
         && (x ?∉ (fv T1))
         && (x ?∉ (fv T2))
       )
     else (
         (* Same type *)
-        (j1 ?= (J I1 Θ ((x, T_equiv b ttrue)::Γ) t1 T)) && (is_valid d1)
-        && (j2 ?= (J I2 Θ ((x, T_equiv b tfalse)::Γ) t2 T)) && (is_valid d2)
+        (j1 ?= (TJ I1 Θ ((x, T_equiv b ttrue)::Γ) t1 T)) && (is_valid d1)
+        && (j2 ?= (TJ I2 Θ ((x, T_equiv b tfalse)::Γ) t2 T)) && (is_valid d2)
         && (x ?∉ (fv T))
       )
 
@@ -62,18 +62,18 @@ Fixpoint is_valid(dv: derivation) : bool :=
 
   (* Pairs *)
   (* PP *)
-  | N (J J_PP Θ Γ (pp t1 t2) (T_prod A B))
-      ((N ((J I1 _ _ _ _) as j1) _ as d1)
-         :: (N ((J I2 _ _ _ _) as j2) _ as d2)::nil) =>
-    (j1 ?= (J I1 Θ Γ t1 A)) && (is_valid d1)
-    && (j2 ?= (J I2 Θ Γ t2 (open 0 B t1))) && (is_valid d2)
+  | N (TJ J_PP Θ Γ (pp t1 t2) (T_prod A B))
+      ((N ((TJ I1 _ _ _ _) as j1) _ as d1)
+         :: (N ((TJ I2 _ _ _ _) as j2) _ as d2)::nil) =>
+    (j1 ?= (TJ I1 Θ Γ t1 A)) && (is_valid d1)
+    && (j2 ?= (TJ I2 Θ Γ t2 (open 0 B t1))) && (is_valid d2)
     && (is_annotated_termb t1) && (is_annotated_typeb B)
   (* Pi1 *)
-  | N (J J_Pi1 Θ Γ (pi1 t) A) ((N ((J I1 _ _ _ (T_prod _ B)) as j) _ as d)::nil) =>
-    (j ?= (J I1 Θ Γ t (T_prod A B))) && (is_valid d)
+  | N (TJ J_Pi1 Θ Γ (pi1 t) A) ((N ((TJ I1 _ _ _ (T_prod _ B)) as j) _ as d)::nil) =>
+    (j ?= (TJ I1 Θ Γ t (T_prod A B))) && (is_valid d)
   (* Pi2 *)
-  | N (J J_Pi2 Θ Γ (pi2 t) T) ((N ((J I1 _ _ _ (T_prod A B)) as j) _ as d)::nil) =>
-    (j ?= (J I1 Θ Γ t (T_prod A B))) && (is_valid d)
+  | N (TJ J_Pi2 Θ Γ (pi2 t) T) ((N ((TJ I1 _ _ _ (T_prod A B)) as j) _ as d)::nil) =>
+    (j ?= (TJ I1 Θ Γ t (T_prod A B))) && (is_valid d)
     && (is_annotated_typeb B)
     && (is_annotated_termb t)
     && ((fv B) ?⊂ (support Γ))
@@ -81,20 +81,20 @@ Fixpoint is_valid(dv: derivation) : bool :=
 
   (* Sums *)
   (* Left *)
-  | N (J J_Left Θ Γ (tleft t) (T_sum A B)) ((N ((J I1 _ _ _ _) as j) _ as d)::nil) =>
-    (j ?= (J I1 Θ Γ t A)) && (is_valid d) && (wfb B 0) && ((fv B) ?⊂ (support Γ))
+  | N (TJ J_Left Θ Γ (tleft t) (T_sum A B)) ((N ((TJ I1 _ _ _ _) as j) _ as d)::nil) =>
+    (j ?= (TJ I1 Θ Γ t A)) && (is_valid d) && (wfb B 0) && ((fv B) ?⊂ (support Γ))
   (* Right *)
-  | N (J J_Right Θ Γ (tright t) (T_sum A B)) ((N ((J I1 _ _ _ _) as j) _ as d)::nil) =>
-    (j ?= (J I1 Θ Γ t B)) && (is_valid d) && (wfb A 0) && ((fv A) ?⊂ (support Γ))
+  | N (TJ J_Right Θ Γ (tright t) (T_sum A B)) ((N ((TJ I1 _ _ _ _) as j) _ as d)::nil) =>
+    (j ?= (TJ I1 Θ Γ t B)) && (is_valid d) && (wfb A 0) && ((fv A) ?⊂ (support Γ))
   (* Sum_match *)
-  | N (J (J_SumMatch T) Θ Γ (sum_match t tl tr) T')
-      ((N ((J I1 _ _ _ (T_sum A B)) as j) _ as d)
-         :: (N ((J Il _ ((p, _)::(y, _)::_) _ _) as jl) _ as dl)
-         :: (N ((J Ir _ _ _ _) as jr) _ as dr) :: nil) =>
-       (j ?= (J I1 Θ Γ t (T_sum A B))) && (is_valid d)
-       && (jl ?= (J Il Θ ((p, T_equiv t (tleft (fvar y term_var)))::(y, A)::Γ) (open 0 tl (fvar y term_var)) (open 0 T (tleft (fvar y term_var)))))
+  | N (TJ (J_SumMatch T) Θ Γ (sum_match t tl tr) T')
+      ((N ((TJ I1 _ _ _ (T_sum A B)) as j) _ as d)
+         :: (N ((TJ Il _ ((p, _)::(y, _)::_) _ _) as jl) _ as dl)
+         :: (N ((TJ Ir _ _ _ _) as jr) _ as dr) :: nil) =>
+       (j ?= (TJ I1 Θ Γ t (T_sum A B))) && (is_valid d)
+       && (jl ?= (TJ Il Θ ((p, T_equiv t (tleft (fvar y term_var)))::(y, A)::Γ) (open 0 tl (fvar y term_var)) (open 0 T (tleft (fvar y term_var)))))
        && (is_valid dl)
-        && (jr ?= (J Ir Θ ((p, T_equiv t (tright (fvar y term_var)))::(y, B)::Γ) (open 0 tr (fvar y term_var)) (open 0 T (tright (fvar y term_var)))))
+        && (jr ?= (TJ Ir Θ ((p, T_equiv t (tright (fvar y term_var)))::(y, B)::Γ) (open 0 tr (fvar y term_var)) (open 0 T (tright (fvar y term_var)))))
        && (is_valid dr)
        && (tree_eq T' (open 0 T t))
        && (p ?∉ (fv tl)) && (p ?∉ (fv tr)) && (p ?∉ (fv t)) && (p ?∉ (fv T)) && (p ?∉ (fv A)) && (p ?∉ (fv B)) && (p ?∉ (fv_context Γ))
@@ -105,19 +105,19 @@ Fixpoint is_valid(dv: derivation) : bool :=
 
 
   (* App *)
-  | N (J J_App Θ Γ (app t1 t2) T)
-      ((N ((J I1 _ _ _ (T_arrow U V)) as j1) _ as d1)
-         :: (N ((J I2 _ _ _ _) as j2) _ as d2)::nil) =>
-    (j1 ?= (J I1 Θ Γ t1 (T_arrow U V))) && (is_valid d1)
-    && (j2 ?= (J I2 Θ Γ t2 U)) && (is_valid d2)
+  | N (TJ J_App Θ Γ (app t1 t2) T)
+      ((N ((TJ I1 _ _ _ (T_arrow U V)) as j1) _ as d1)
+         :: (N ((TJ I2 _ _ _ _) as j2) _ as d2)::nil) =>
+    (j1 ?= (TJ I1 Θ Γ t1 (T_arrow U V))) && (is_valid d1)
+    && (j2 ?= (TJ I2 Θ Γ t2 U)) && (is_valid d2)
     && is_annotated_typeb V
     && is_annotated_termb t2
     && (tree_eq T (open 0 V t2))
 
   (* Lambda *)
-  | N (J J_Lambda Θ Γ (lambda U t) (T_arrow _ V as T))
-      ((N ((J I1 _ ((x,_)::_) _ _) as j) _ as d)::nil) =>
-    (j ?= (J I1 Θ ((x,U)::Γ) (open 0 t (fvar x term_var)) (open 0 V (fvar x term_var)))) && (is_valid d)
+  | N (TJ J_Lambda Θ Γ (lambda U t) (T_arrow _ V as T))
+      ((N ((TJ I1 _ ((x,_)::_) _ _) as j) _ as d)::nil) =>
+    (j ?= (TJ I1 Θ ((x,U)::Γ) (open 0 t (fvar x term_var)) (open 0 V (fvar x term_var)))) && (is_valid d)
     && is_annotated_termb t
     && wfb U 0
     && (x ?∉ fv_context Γ)
@@ -130,11 +130,11 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (tree_eq T (T_arrow U V))
 
   (* tlet *)
-  | N (J (J_Let B) Θ Γ (tlet t1 A t2) T)
-      ((N ((J I1 _ _ _ _) as j1) _ as d1)
-         :: (N ((J I2 _ ((p, _)::(x,_)::_) _ _) as j2) _ as d2) :: nil) =>
-    (j1 ?= (J I1 Θ Γ t1 A)) && (is_valid d1)
-    && (j2 ?= (J I2 Θ ((p, T_equiv (fvar x term_var) t1)::(x,A)::Γ) (open 0 t2 (fvar x term_var)) (open 0 B (fvar x term_var)))) && (is_valid d2)
+  | N (TJ (J_Let B) Θ Γ (tlet t1 A t2) T)
+      ((N ((TJ I1 _ _ _ _) as j1) _ as d1)
+         :: (N ((TJ I2 _ ((p, _)::(x,_)::_) _ _) as j2) _ as d2) :: nil) =>
+    (j1 ?= (TJ I1 Θ Γ t1 A)) && (is_valid d1)
+    && (j2 ?= (TJ I2 Θ ((p, T_equiv (fvar x term_var) t1)::(x,A)::Γ) (open 0 t2 (fvar x term_var)) (open 0 B (fvar x term_var)))) && (is_valid d2)
     && (x ?∉ (fv_context Γ)) && (p ?∉ (fv_context Γ))
     && (x ?<> p)
     && (x ?∉ (fv t2)) && (p ?∉ (fv t2))
@@ -147,21 +147,21 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (tree_eq T (open 0 B t1))
 
   (* Var *)
-  | N (J J_Var _ Γ (fvar x term_var) T) nil =>
+  | N (TJ J_Var _ Γ (fvar x term_var) T) nil =>
     (option_tree_dec_eq (lookup PeanoNat.Nat.eq_dec Γ x) (Some T))
     && (wfb T 0) && (subsetb (fv T) (support Γ))
 
   (* Var - weaken *)
-  | N (J J_VarWeaken Θ ((x,T)::Γ) u U)
-      ((N ((J I1 _ _ _ _) as j1) _ as d1)::nil) =>
-    (j1 ?= (J I1 Θ Γ u U)) && (is_valid d1)
+  | N (TJ J_VarWeaken Θ ((x,T)::Γ) u U)
+      ((N ((TJ I1 _ _ _ _) as j1) _ as d1)::nil) =>
+    (j1 ?= (TJ I1 Θ Γ u U)) && (is_valid d1)
     && (x ?∉ (support Γ)) && (x ?∉ (fv u)) && (x ?∉ (fv U)) && (x ?∉ Θ)
 
   (* Fix *)
-  | N (J J_Fix Θ Γ (tfix T ts) (T_forall T_nat T'))
-      ((N ((J I1 _ ((p, _)::(y, _)::(n, _)::_) _ _) as j1) _ as d1) :: nil) =>
+  | N (TJ J_Fix Θ Γ (tfix T ts) (T_forall T_nat T'))
+      ((N ((TJ I1 _ ((p, _)::(y, _)::(n, _)::_) _ _) as j1) _ as d1) :: nil) =>
     (tree_eq T T')
-    && (j1 ?= (J I1 Θ ((p, T_equiv (fvar y term_var) (tfix T ts))
+    && (j1 ?= (TJ I1 Θ ((p, T_equiv (fvar y term_var) (tfix T ts))
                          ::(y, T_forall (T_refine T_nat (annotated_tlt (lvar 0 term_var) (fvar n term_var))) T)
                          ::(n, T_nat)::Γ)
                  (open 0 (open 1 ts (fvar n term_var)) (fvar y term_var))
@@ -251,21 +251,22 @@ Ltac rewrite_deriv :=
 
 Ltac destruct_clear t H := destruct t; try apply (ex_falso_quolibet _ H).
 
-Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_tree (root dv)) 0 /\ wf (J_type (root dv)) 0.
+
+Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_term1 (root dv)) 0 /\ wf (J_term2 (root dv)) 0.
 Proof.
   induction dv using derivation_ind.
-  intros. unfold root, J_tree, J_type. unfold forallP in X.
+  intros. unfold root, J_term1, J_term2. unfold forallP in X.
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
   all: repeat subst || light_bool || match goal with | H: wf (_ _) _ |- _ => simpl in H end || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens ; simpl.
   all: repeat split; eauto with wf.
 Qed.
 
-Lemma is_valid_wf_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf t 0.
-Proof. intros; pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ); steps. Qed.
+Lemma is_valid_wf_t : forall n Θ Γ t T c, is_valid (N (TJ n Θ Γ t T) c) = true -> wf t 0.
+Proof. intros; pose proof (is_valid_wf_aux  (N (TJ n Θ Γ t T) c) H ); steps. Qed.
 
-Lemma is_valid_wf_T : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> wf T 0.
-Proof. intros; pose proof (is_valid_wf_aux  (N (J n Θ Γ t T) c) H ); steps. Qed.
+Lemma is_valid_wf_T : forall n Θ Γ t T c, is_valid (N (TJ n Θ Γ t T) c) = true -> wf T 0.
+Proof. intros; pose proof (is_valid_wf_aux  (N (TJ n Θ Γ t T) c) H ); steps. Qed.
 
 Lemma subset_nil : forall {T} A, @subset T nil A.
 Proof.
@@ -303,17 +304,17 @@ Qed.
 
 
 
-Lemma is_valid_support_term_aux : forall dv, is_valid dv = true -> subset (fv (J_tree (root dv)) ) (support (J_context (root dv))) /\ subset (fv (J_type (root dv)) ) (support (J_context (root dv))).
+Lemma is_valid_support_term_aux : forall dv, is_valid dv = true -> subset (fv (J_term1 (root dv)) ) (support (J_context (root dv))) /\ subset (fv (J_term2 (root dv)) ) (support (J_context (root dv))).
 Proof.
   induction dv using derivation_ind.
-  intros. unfold root, J_tree, J_type, fv. unfold forallP in X.
+  intros. unfold root, J_term1, J_term2, fv. unfold forallP in X.
   destruct J.
   pose proof (subset_context_support Γ).
   (* Finish pattern matching deconstruction *)
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
   all: simpl; eauto 2 using subset_nil.
-  all: repeat subst || light_bool || rewrite_deriv || rewrite pfv_fvar || rewrite pfv_fvar2 ||
+  all: repeat subst || light_bool || rewrite_deriv || discriminate || rewrite pfv_fvar || rewrite pfv_fvar2 ||
               match goal with
               | H1: ~ ?x ∈ ?A, H2: subset ?A (?x::?B) |- _ => apply (subset_add3 _ x A B H1) in H2
               | H: subset (pfv (_ _ _) _) _ |- _ => simpl in H
@@ -338,16 +339,16 @@ Proof.
             | H: subset( fv (_ _ _)) _ |- _ => cbn in H end
 
        || invert_constructor_equalities || apply support_open2|| inst_list_prop || modus_ponens || simpl || split;
-  eauto 3 using singleton_subset, inList1, inList2, inList3 with sets.
+    eauto 3 using singleton_subset, inList1, inList2, inList3 with sets.
 Qed.
 
 
-Lemma is_valid_support_t : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> subset (fv t) (support Γ).
-Proof. intros. pose proof (is_valid_support_term_aux  (N (J n Θ Γ t T) c) H ). steps. Qed.
+Lemma is_valid_support_t : forall n Θ Γ t T c, is_valid (N (TJ n Θ Γ t T) c) = true -> subset (fv t) (support Γ).
+Proof. intros. pose proof (is_valid_support_term_aux  (N (TJ n Θ Γ t T) c) H ). steps. Qed.
 Hint Resolve is_valid_support_t: deriv.
 
-Lemma is_valid_support_T : forall n Θ Γ t T c, is_valid (N (J n Θ Γ t T) c) = true -> subset (fv T) (support Γ).
-Proof. intros. pose proof (is_valid_support_term_aux  (N (J n Θ Γ t T) c) H ). steps. Qed.
+Lemma is_valid_support_T : forall n Θ Γ t T c, is_valid (N (TJ n Θ Γ t T) c) = true -> subset (fv T) (support Γ).
+Proof. intros. pose proof (is_valid_support_term_aux  (N (TJ n Θ Γ t T) c) H ). steps. Qed.
 Hint Resolve is_valid_support_T: deriv.
 
 
@@ -357,7 +358,7 @@ Hint Resolve is_valid_wf_T: deriv.
 
 Ltac consume_is_valid :=
   match goal with
-  | H: is_valid (N (J ?n ?Θ ?Γ ?t ?T) ?c) = true |- _ =>
+  | H: is_valid (N (TJ ?n ?Θ ?Γ ?t ?T) ?c) = true |- _ =>
     epose proof (is_valid_wf_t n Θ Γ t T c H) ;
     epose proof (is_valid_wf_T n Θ Γ t T c H) ;
     epose proof (is_valid_support_t n Θ Γ t T c H) ;
@@ -411,7 +412,7 @@ Hint Rewrite isValueCorrect: deriv.
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
 Proof.
   induction dv using derivation_ind.
-  intros. unfold root, J_tree, J_type, fv. unfold forallP in X.
+  intros. unfold root, J_term1, J_term2, fv. unfold forallP in X.
   destruct J.
   pose proof (subset_context_support Γ).
   (* Finish pattern matching deconstruction *)
@@ -420,6 +421,7 @@ Proof.
   all: repeat subst || light_bool || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens || simpl || consume_is_valid .
   (* remove easy cases *)
   all: eauto 2 with deriv.
+  all: try discriminate.
   all: repeat  match goal with | H: is_true (root _) |- _ => simpl in H end.
   all: try
          (apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3))

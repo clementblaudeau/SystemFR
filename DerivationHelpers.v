@@ -10,6 +10,7 @@ Require Export SystemFR.AnnotatedLet.
 Require Export SystemFR.AnnotatedVar.
 Require Export SystemFR.AnnotatedAddEquality.
 Require Export SystemFR.AnnotatedFix.
+Require Export SystemFR.AnnotatedEquivalent.
 
 
 Import Coq.Strings.String.
@@ -251,6 +252,25 @@ Qed.
 
 Hint Rewrite wfb_prop wfsb_prop: deriv.
 
+(* Erase term *)
+Fixpoint is_erased_termb (t : tree) : bool :=
+  match t with
+  | app t1 t2 | pp t1 t2 => is_erased_termb t1 && is_erased_termb t2
+  | ite t1 t2 t3 => is_erased_termb t1 && is_erased_termb t2 && is_erased_termb t3
+  | fvar _ term_var | lvar _ term_var | notype_err | uu | ttrue | tfalse | zero => true
+  | tmatch t' t0 ts => is_erased_termb t' && is_erased_termb t0 && is_erased_termb ts
+  | notype_lambda t' | pi1 t' | pi2 t' | succ t' | notype_tfix t' => is_erased_termb t'
+  | tsize t0 | boolean_recognizer _ t0 | tright t0 | tleft t0 => is_erased_termb t0
+  | sum_match t0 tl tr => is_erased_termb t0 && is_erased_termb tl && is_erased_termb tr
+  | _ => false
+  end.
+Lemma is_erased_termb_prop : forall t, (is_erased_termb t = true) <-> (is_erased_term t).
+Proof.
+  induction t.
+  all: repeat simpl || steps || bools.
+Qed.
+Hint Rewrite is_erased_termb_prop: deriv.
+
 (* Judgments *)
 Inductive TJ_name :=
 | J_Nat
@@ -279,6 +299,8 @@ Inductive StJ_name :=
 
 Inductive EJ_name :=
 | EJ_trans
+| EJ_sym
+| EJ_refl
 .
 
 Inductive Judgment:=
@@ -393,7 +415,7 @@ Defined.
 Definition EJ_name_eq_dec: forall (x y: EJ_name), {x = y} + {x <> y}.
 Proof.
   intros.
-  destruct x, y.
+  destruct x, y;
   decide equality.
 Defined.
 

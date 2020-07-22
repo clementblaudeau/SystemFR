@@ -11,6 +11,8 @@ Fixpoint is_valid(dv: derivation) : bool :=
   match dv with
   (* | N (InferJudgment "InferUnit" _ _ uu T_unit) nil => true *)
 
+  (* TYPING JUDGMENTS *)
+
   (* Bools *)
   | N (TJ J_Bool _ _ ttrue T_bool) nil => true
   | N (TJ J_Bool _ _ tfalse T_bool) nil => true
@@ -173,6 +175,26 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (n ?∉ Θ) && (y ?∉ Θ) && (p ?∉ Θ)
     && (NoDupb (n::y::p::nil)) && (wfb (erase_term ts) 1) && (wfb ts 1)
     && (is_annotated_termb ts) && (is_annotated_typeb T)
+
+
+  (* EQUIVALENCE JUDGMENTS *)
+  (* Symetric *)
+  | N (EJ E_sym Θ Γ t1 t2)
+      ((N ((EJ I1 _ _ _ _) as j1) _ as d1)::nil) =>
+    (j1 ?= (EJ I1 Θ Γ t2 t1)) && (is_valid d1)
+
+  (* Transitivity *)
+  | N (EJ E_trans Θ Γ t1 t3)
+      ((N ((EJ I1 _ _ _ t2) as j1) _ as d1)
+         :: (N ((EJ I2 _ _ _ _) as j2) _ as d2) :: nil) =>
+       (j1 ?= (EJ I1 Θ Γ t1 t2)) && (is_valid d1)
+       && (j2 ?= (EJ I2 Θ Γ t2 t3)) && (is_valid d2)
+
+      (* Reflexivity *)
+  | N (EJ E_refl Θ Γ t t') nil =>
+    (tree_eq t t') && (wfb t 0)
+    && ((fv t) ?⊂ (support Γ))
+    && (is_erased_termb t)
 
   | _ => false
   end.
@@ -435,8 +457,11 @@ Proof.
        || (apply (annotated_reducible_sum_match Θ Γ t1_1 t1_2 t1_3 t2_1 t2_2 t0  n4 n3))
        || (apply (annotated_reducible_let Θ Γ _ _ n4 n3))
        || (apply (annotated_reducible_T_ite Θ Γ t0_1 t0_2 t0_3 T0 T1 n3))
-       || ( apply (annotated_reducible_fix_strong_induction Θ Γ t0_2 t0_4 n3 n2 n1) ; eauto using isValueCorrect) ;
-    eauto ; soundness_finish.
+       || (apply (annotated_reducible_fix_strong_induction Θ Γ t0_2 t0_4 n3 n2 n1) ; eauto using isValueCorrect)
+       || (apply annotated_equivalent_sym)
+       || (apply annotated_equivalent_refl)
+       || (apply annotated_equivalent_trans)
+  ; eauto ; soundness_finish.
 Qed.
 
 Show Ltac Profile.

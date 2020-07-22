@@ -458,9 +458,9 @@ Proof.
        || (apply (annotated_reducible_let Θ Γ _ _ n4 n3))
        || (apply (annotated_reducible_T_ite Θ Γ t0_1 t0_2 t0_3 T0 T1 n3))
        || (apply (annotated_reducible_fix_strong_induction Θ Γ t0_2 t0_4 n3 n2 n1) ; eauto using isValueCorrect)
-       || (apply annotated_equivalent_sym)
        || (apply annotated_equivalent_refl)
-       || (apply annotated_equivalent_trans)
+       || match goal with |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]] |- [[?Θ; ?Γ ⊨ ?t2 ≡ ?t1 ]] => apply annotated_equivalent_sym end
+       || (eapply annotated_equivalent_trans)
   ; eauto ; soundness_finish.
 Qed.
 

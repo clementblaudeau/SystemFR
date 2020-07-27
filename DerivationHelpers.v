@@ -11,6 +11,7 @@ Require Export SystemFR.AnnotatedVar.
 Require Export SystemFR.AnnotatedAddEquality.
 Require Export SystemFR.AnnotatedFix.
 Require Export SystemFR.AnnotatedEquivalent.
+Require Export SystemFR.AnnotatedEquivalentContext.
 
 
 Import Coq.Strings.String.
@@ -298,15 +299,19 @@ Inductive StJ_name :=
 | StJ_sub.
 
 Inductive EJ_name :=
-| EJ_trans
-| EJ_sym
-| EJ_refl
+| E_trans
+| E_sym
+| E_refl
+| E_context
+| E_lambdas
+| E_pair_ext
+
 .
 
 Inductive Judgment:=
 | TJ(name: TJ_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment
 | StJ(name: StJ_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment
-| EJ(name: StJ_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment
+| EJ(name: EJ_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment
 .
 
 

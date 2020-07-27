@@ -190,11 +190,22 @@ Fixpoint is_valid(dv: derivation) : bool :=
        (j1 ?= (EJ I1 Θ Γ t1 t2)) && (is_valid d1)
        && (j2 ?= (EJ I2 Θ Γ t2 t3)) && (is_valid d2)
 
-      (* Reflexivity *)
+  (* Reflexivity *)
   | N (EJ E_refl Θ Γ t t') nil =>
     (tree_eq t t') && (wfb t 0)
     && ((fv t) ?⊂ (support Γ))
     && (is_erased_termb t)
+
+  (* Lambdas *)
+  | N (EJ E_lambdas Θ Γ (lambda A t1) (lambda B t2))
+      (( N ((EJ I1 _ _ _ _) as j1) _ as d1) :: nil) =>
+    (j1 ?= (EJ I1 Θ Γ t1 t2)) && (is_valid d1)
+    && (wfb A 0) && (wfb B 0) (* ADDED HYPOTHESIS *)
+    && (is_annotated_termb t1)
+    && (is_annotated_termb t2)
+    && (is_annotated_typeb A)
+    && (subsetb (fv A) (support Γ))
+    && (subsetb (fv B) (support Γ)) (* ADDED HYPOTHESIS *)
 
   | _ => false
   end.
@@ -445,23 +456,40 @@ Proof.
   all: eauto 2 with deriv.
   all: try discriminate.
   all: repeat  match goal with | H: is_true (root _) |- _ => simpl in H end.
-  all: try
-         (apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3))
-       || (apply (annotated_reducible_T_ite Θ Γ t0_1 t0_2 t0_3 T1 T2 n3))
-       || (eapply (annotated_reducible_ite))
-       || (eapply annotated_reducible_pi1)
-       || (eapply annotated_reducible_pi2)
-       || (eapply (annotated_reducible_pp Θ Γ))
-       || (eapply (annotated_reducible_app))
-       || (eapply annotated_reducible_lambda)
-       || (apply (annotated_reducible_sum_match Θ Γ t1_1 t1_2 t1_3 t2_1 t2_2 t0  n4 n3))
-       || (apply (annotated_reducible_let Θ Γ _ _ n4 n3))
-       || (apply (annotated_reducible_T_ite Θ Γ t0_1 t0_2 t0_3 T0 T1 n3))
-       || (apply (annotated_reducible_fix_strong_induction Θ Γ t0_2 t0_4 n3 n2 n1) ; eauto using isValueCorrect)
-       || (apply annotated_equivalent_refl)
-       || match goal with |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]] |- [[?Θ; ?Γ ⊨ ?t2 ≡ ?t1 ]] => apply annotated_equivalent_sym end
-       || (eapply annotated_equivalent_trans)
-  ; eauto ; soundness_finish.
+  all:
+    try
+      match goal with
+      | H: _
+        |- [[?Θ; ?Γ ⊨ (tmatch ?tn ?t0 ?ts) : ?T]] => apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3)
+      | H: [[?Θ; (?n3, _)::?Γ ⊨ ?t3 : _ ]]
+        |- [[?Θ; ?Γ ⊨ (ite ?t1 ?t2 ?t3) : (T_ite _ ?T1 ?T2)]] =>
+        (apply (annotated_reducible_T_ite Θ Γ t1 t2 t3 T1 T2 n3))
+      | H:_
+        |- [[?Θ; ?Γ ⊨ (ite ?t1 ?t2 ?t3) : ?T ]] => eapply annotated_reducible_ite
+      | H: [[?Θ; ?Γ ⊨ ?t : (T_prod ?A ?B)]]
+        |- [[?Θ; ?Γ ⊨ (pi1 ?t) : ?A]] => apply (annotated_reducible_pi1 Θ Γ t A B)
+      | H: [[?Θ; ?Γ ⊨ ?t : (T_prod ?A ?B)]]
+        |- [[?Θ; ?Γ ⊨ (pi2 ?t) : _]] => apply (annotated_reducible_pi2 Θ Γ t A B)
+      | H: _
+        |- [[?Θ; ?Γ ⊨ (app ?t) : ?T]] => apply (annotated_reducible_app)
+      | H: _
+        |- [[?Θ; ?Γ ⊨ (pp ?t1 ?t2) : (T_prod ?A ?B)]] => eapply (annotated_reducible_pp Θ Γ A B t1 t2)
+      | H: [[?Θ; ?Γ ⊨ ?t1 : (T_arrow ?U ?V)]]
+        |- [[?Θ; ?Γ ⊨ (app ?t1 ?t2) : ?T]] => apply (annotated_reducible_app Θ Γ t1 t2 U V)
+      | H: [[?Θ; ?Γ ⊨ ?t1 : (T_sum ?A ?B)]], H1: ?y <> ?p
+        |- [[?Θ; ?Γ ⊨ (sum_match ?t1 ?t2 ?t3) : ?T]] => eapply (annotated_reducible_sum_match Θ Γ t1 t2 t3 A B _ y p)
+      | H: _
+        |- [[?Θ; ?Γ ⊨ (lambda ?T ?t) : _]] => eapply (annotated_reducible_lambda)
+      | H: _
+        |- [[?Θ; ?Γ ⊨ (tlet ?T ?t) : _]] => eapply (annotated_reducible_let Θ Γ)
+      | H: ?x <> ?p
+        |- [[?Θ; ?Γ ⊨ (tlet ?t1 ?A ?t2) : _]] => apply (annotated_reducible_let Θ Γ t1 t2 x p A)
+      | H: [[ ?Θ; (?p,_)::(?y,_)::(?n,_)::?Γ ⊨ _ : _ ]] |-  [[?Θ; ?Γ ⊨ (tfix ?t1 ?t2) : (T_forall T_nat ?t1)]] => apply (annotated_reducible_fix_strong_induction Θ Γ t2 t1 n y p)
+      |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]], H2: [[?Θ; ?Γ ⊨ ?t2 ≡ ?t3]] |- [[?Θ; ?Γ ⊨ ?t1 ≡ ?t3 ]] => apply (annotated_equivalent_trans Θ Γ t1 t2 t3 H H2)
+      |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]] |- [[?Θ; ?Γ ⊨ ?t2 ≡ ?t1 ]] => apply (annotated_equivalent_sym Θ Γ t1 t2 H)
+      |H: _ |- [[?Θ; ?Γ ⊨ ?t ≡ ?t ]] => apply (annotated_equivalent_refl Θ Γ t)
+      |H: _ |- [[?Θ; ?Γ ⊨ (lambda ?A ?t1) ≡ (lambda ?B ?t2) ]] => apply (annotated_equivalence_lambdas Θ Γ t1 t2 A B); eauto with wf
+      end; eauto; soundness_finish.
 Qed.
 
 Show Ltac Profile.

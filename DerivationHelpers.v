@@ -12,7 +12,8 @@ Require Export SystemFR.AnnotatedAddEquality.
 Require Export SystemFR.AnnotatedFix.
 Require Export SystemFR.AnnotatedEquivalent.
 Require Export SystemFR.AnnotatedEquivalentContext.
-
+Require Export SystemFR.AnnotatedEquivalentElim.
+Require Export SystemFR.AnnotatedEquivalentPairExt.
 
 Import Coq.Strings.String.
 Import Coq.Bool.Bool.
@@ -293,7 +294,9 @@ Inductive TJ_name :=
 
 | J_Var | J_VarWeaken
 
-| J_Fix.
+| J_Fix
+
+| J_equiv_elim.
 
 Inductive StJ_name :=
 | StJ_sub.
@@ -305,7 +308,6 @@ Inductive EJ_name :=
 | E_context : tree -> EJ_name
 | E_lambdas
 | E_pair_ext
-
 .
 
 Inductive Judgment:=

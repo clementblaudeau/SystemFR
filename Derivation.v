@@ -176,6 +176,13 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (NoDupb (n::y::p::nil)) && (wfb (erase_term ts) 1) && (wfb ts 1)
     && (is_annotated_termb ts) && (is_annotated_typeb T)
 
+  (* Elimination *)
+  | N (TJ J_equiv_elim Θ Γ t2 T)
+      (( N ((EJ I1 _ _ t1 _) as j1) _  as d1)
+         :: ( N ((TJ I2 _ _ _ _) as j2) _ as d2)::nil) =>
+    (j1 ?= (EJ I1 Θ Γ t1 t2)) && (is_valid d1)
+    && (j2 ?= (TJ I2 Θ Γ t1 T)) && (is_valid d2)
+
 
   (* EQUIVALENCE JUDGMENTS *)
   (* Symetric *)
@@ -216,6 +223,13 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (tree_eq T1 (open 0 C t1))
     && (tree_eq T2 (open 0 C t2))
     && (wfb C 1)
+
+  (* Pair ext *)
+  | N (EJ E_pair_ext Θ Γ t T)
+      (( N ((TJ I1 _ _ _ (T_prod A B)) as j1) _ as d1)::nil) =>
+    (j1 ?= (TJ I1 Θ Γ t (T_prod A B))) && (is_valid d1)
+    && (tree_eq T (pp (pi1 t) (pi2 t)))
+    && (is_annotated_termb t)
 
   | _ => false
   end.
@@ -500,6 +514,10 @@ Proof.
       |H: _ |- [[?Θ; ?Γ ⊨ ?t ≡ ?t ]] => apply (annotated_equivalent_refl Θ Γ t)
       |H: _ |- [[?Θ; ?Γ ⊨ (lambda ?A ?t1) ≡ (lambda ?B ?t2) ]] => apply (annotated_equivalence_lambdas Θ Γ t1 t2 A B); eauto with wf
       | H:  [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2]] |- [[?Θ; ?Γ ⊨ open 0 ?C ?t1 ≡ open 0 ?C ?t2]] => apply (annotated_equivalence_context Θ Γ C t1 t2)
+      |H1: [[ ?Θ ; ?Γ ⊨ ?t1 ≡ ?t2]], H2 : [[ ?Θ ; ?Γ ⊨ ?t1 : ?T]]
+       |- [[ ?Θ ; ?Γ ⊨ ?t2 : ?T]] => apply (annotated_equivalent_elim Θ Γ t1 t2 T)
+      |H: [[?Θ;?Γ ⊨ ?t : ?T_prod ?A ?B ]]
+       |-  [[?Θ;?Γ ⊨ ?t ≡ (pp (pi1 ?t) (pi2 ?t))]] => apply (annotated_equivalent_pair_ext Θ Γ t A B)
       end; eauto; soundness_finish.
 Qed.
 

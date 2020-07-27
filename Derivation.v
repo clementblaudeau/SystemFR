@@ -207,6 +207,16 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (subsetb (fv A) (support Γ))
     && (subsetb (fv B) (support Γ)) (* ADDED HYPOTHESIS *)
 
+  (* Context *)
+  | N (EJ (E_context C) Θ Γ T1 T2)
+      (( N ((EJ I1 _ _ t1 t2) as j1)   as d1) :: nil) =>
+    (j1 ?= (EJ I1 Θ Γ t1 t2)) && (is_valid d1)
+    && (is_annotated_termb t1) && (is_annotated_termb t2)
+    && (subsetb (fv C) (support Γ)) && (is_annotated_termb C)
+    && (tree_eq T1 (open 0 C t1))
+    && (tree_eq T2 (open 0 C t2))
+    && (wfb C 1)
+
   | _ => false
   end.
 
@@ -489,6 +499,7 @@ Proof.
       |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]] |- [[?Θ; ?Γ ⊨ ?t2 ≡ ?t1 ]] => apply (annotated_equivalent_sym Θ Γ t1 t2 H)
       |H: _ |- [[?Θ; ?Γ ⊨ ?t ≡ ?t ]] => apply (annotated_equivalent_refl Θ Γ t)
       |H: _ |- [[?Θ; ?Γ ⊨ (lambda ?A ?t1) ≡ (lambda ?B ?t2) ]] => apply (annotated_equivalence_lambdas Θ Γ t1 t2 A B); eauto with wf
+      | H:  [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2]] |- [[?Θ; ?Γ ⊨ open 0 ?C ?t1 ≡ open 0 ?C ?t2]] => apply (annotated_equivalence_context Θ Γ C t1 t2)
       end; eauto; soundness_finish.
 Qed.
 

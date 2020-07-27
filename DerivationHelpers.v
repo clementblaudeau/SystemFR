@@ -302,7 +302,7 @@ Inductive EJ_name :=
 | E_trans
 | E_sym
 | E_refl
-| E_context
+| E_context : tree -> EJ_name
 | E_lambdas
 | E_pair_ext
 
@@ -421,7 +421,7 @@ Definition EJ_name_eq_dec: forall (x y: EJ_name), {x = y} + {x <> y}.
 Proof.
   intros.
   destruct x, y;
-  decide equality.
+  decide equality; try apply tree_eq_dec.
 Defined.
 
 Definition Judgment_eq_dec : forall (x y : Judgment), {x = y} + {x <> y}.

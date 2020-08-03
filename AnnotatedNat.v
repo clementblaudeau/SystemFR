@@ -3,6 +3,7 @@ Require Import Coq.Lists.List.
 Require Export SystemFR.Judgments.
 Require Export SystemFR.AnnotatedTactics.
 Require Export SystemFR.ErasedNat.
+Require Export SystemFR.Evaluator.
 
 Lemma annotated_reducible_zero:
   forall tvars gamma,
@@ -10,6 +11,29 @@ Lemma annotated_reducible_zero:
 Proof.
   unfold annotated_reducible; eauto using open_reducible_zero.
 Qed.
+
+
+Lemma annotated_reducible_nat_value:
+  forall tvars gamma t,
+    (is_nat_value t) ->
+    [[ tvars; gamma ⊨ t : T_nat ]].
+Proof.
+  assert (forall t lterms, is_nat_value t -> erase_term t = t /\ substitute t lterms = t /\ closed_term t). {
+    intros.
+    rewrite <- isNat_Correct in H.
+    induction t; repeat steps || bools || cbv.
+  }
+  unfold annotated_reducible, open_reducible, reducible, reduces_to, erase_type.
+  intros.
+  pose proof (H t lterms H0) as [H_erased [H_subs H_closed ] ].
+  split.
+    + intuition.
+    + exists t ; split.
+      ++ unfold substitute, psubstitute.
+         rewrite (reducible_values_equation_4 theta t); eauto.
+      ++ rewrite H_erased, H_subs. apply Refl.
+Qed.
+
 
 Lemma annotated_reducible_succ:
   forall tvars gamma t,

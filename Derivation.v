@@ -19,6 +19,7 @@ Fixpoint is_valid(dv: derivation) : bool :=
 
   (* Naturals *)
   | N (TJ J_Nat _ _ zero T_nat) nil => true
+  | N (TJ J_Nat _ _ (succ t) T_nat) nil => (isNat t)
   | N (TJ J_Nat Θ Γ (succ t) T_nat) (N (TJ I0 _ _ _ T_nat as j) _ as dv' ::nil) =>
     (j ?= (TJ I0 Θ Γ t T_nat)) && (is_valid dv')
   | N (TJ J_Match Θ Γ (tmatch tn t0 ts) T)
@@ -308,6 +309,7 @@ Ltac rewrite_deriv :=
 
 Ltac destruct_clear t H := destruct t; try apply (ex_falso_quolibet _ H).
 
+Hint Rewrite isNat_Correct : deriv.
 
 Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_term1 (root dv)) 0 /\ wf (J_term2 (root dv)) 0.
 Proof.
@@ -359,8 +361,6 @@ Lemma subset_open_open: forall k1 k2 t n3 n2 n1 A,
   apply (support_open t (fvar n3 term_var) term_var k2 (n1::n2::n3::A) H_temp3 H_temp2).
 Qed.
 
-
-
 Lemma is_valid_support_term_aux : forall dv, is_valid dv = true -> subset (fv (J_term1 (root dv)) ) (support (J_context (root dv))) /\ subset (fv (J_term2 (root dv)) ) (support (J_context (root dv))).
 Proof.
   induction dv using derivation_ind.
@@ -376,6 +376,7 @@ Proof.
               | H1: ~ ?x ∈ ?A, H2: subset ?A (?x::?B) |- _ => apply (subset_add3 _ x A B H1) in H2
               | H: subset (pfv (_ _ _) _) _ |- _ => simpl in H
               | H: subset _ (support (_::_)) |- _ => simpl in H
+              | H: is_nat_value ?t |- subset (pfv ?t ?tag) ?A => rewrite nat_value_fv
               | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H
               | H: _ |- subset ( _ ++ _ ) _ => apply subset_union2; eauto
               | H1: ~ ?n ∈ (fv_context ?Γ),
@@ -483,6 +484,7 @@ Proof.
   all:
     try
       match goal with
+      | H: (is_nat_value ?t) |- [[?Θ; ?Γ ⊨ (succ ?t) : T_nat]] => apply (annotated_reducible_nat_value Θ Γ (succ t) (INVSucc t H)); cbv
       | H: _
         |- [[?Θ; ?Γ ⊨ (tmatch ?tn ?t0 ?ts) : ?T]] => apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3)
       | H: [[?Θ; (?n3, _)::?Γ ⊨ ?t3 : _ ]]

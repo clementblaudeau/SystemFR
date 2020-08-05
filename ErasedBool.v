@@ -70,21 +70,25 @@ Proof.
 Qed.
 
 Lemma open_reducible_ite:
-  forall tvars gamma T b t1 t2 x,
+  forall tvars gamma T b t1 t2 x1 x2,
     wf t1 0 ->
     wf t2 0 ->
     subset (fv t1) (support gamma) ->
     subset (fv t2) (support gamma) ->
-    ~(x ∈ fv b) ->
-    ~(x ∈ fv T) ->
-    ~(x ∈ fv_context gamma) ->
-    ~(x ∈ tvars) ->
+    ~(x1 ∈ fv b) ->
+    ~(x1 ∈ fv T) ->
+    ~(x1 ∈ fv_context gamma) ->
+    ~(x1 ∈ tvars) ->
+    ~(x2 ∈ fv b) ->
+    ~(x2 ∈ fv T) ->
+    ~(x2 ∈ fv_context gamma) ->
+    ~(x2 ∈ tvars) ->
     is_erased_term b ->
     is_erased_term t1 ->
     is_erased_term t2 ->
     [ tvars; gamma ⊨ b : T_bool ] ->
-    [ tvars; (x, T_equiv b ttrue) :: gamma ⊨ t1 : T ] ->
-    [ tvars; (x, T_equiv b tfalse) :: gamma ⊨ t2 : T ] ->
+    [ tvars; (x1, T_equiv b ttrue) :: gamma ⊨ t1 : T ] ->
+    [ tvars; (x2, T_equiv b tfalse) :: gamma ⊨ t2 : T ] ->
     [ tvars; gamma ⊨ ite b t1 t2 : T ].
 Proof.
   intros; unfold open_reducible; steps.
@@ -94,8 +98,8 @@ Proof.
     eauto using subset_same with fv;
     eauto with erased.
 
-  - unshelve epose proof (H11 _ ((x, uu) :: lterms) _ _ _);
+  - unshelve epose proof (H15 _ ((x1, uu) :: lterms) _ _ _);
       repeat step || apply SatCons || list_utils || simp_red || t_substitutions.
-  - unshelve epose proof (H12 _ ((x, uu) :: lterms) _ _ _);
+  - unshelve epose proof (H16 _ ((x2, uu) :: lterms) _ _ _);
       repeat step || apply SatCons || list_utils || simp_red || t_substitutions.
 Qed.

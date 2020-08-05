@@ -39,26 +39,27 @@ Fixpoint is_valid(dv: derivation) : bool :=
   (* If then else *)
   | N (TJ J_If Θ Γ (ite b t1 t2) T)
       ((N (TJ Ic _ _ _ _ as jb) _ as db)
-         ::(N ((TJ I1 _ ((x,(T_equiv _ ttrue))::_) _ T1) as j1) _ as d1)
-         ::(N ((TJ I2 _ ((_,(T_equiv _ tfalse))::_) _ T2) as j2) _ as d2)
+         ::(N ((TJ I1 _ ((x1,(T_equiv _ ttrue))::_) _ T1) as j1) _ as d1)
+         ::(N ((TJ I2 _ ((x2,(T_equiv _ tfalse))::_) _ T2) as j2) _ as d2)
          ::nil) =>
     (jb ?= (TJ Ic Θ Γ b T_bool)) && (is_valid db)
-    && (x ?∉ (fv_context Γ))
-    && (x ?∉ Θ )
-    && (x ?∉ (fv t1))
-    && (x ?∉ (fv t2)) &&
+    && (x1 ?∉ (fv_context Γ))
+    && (x1 ?∉ Θ )
+    && (x1 ?∉ (fv t1))
+    && (x2 ?∉ (fv t2))
+    && ((PeanoNat.Nat.eqb x1 x2) || ((x2 ?∉ (fv_context Γ)) && (x2 ?∉ Θ ))) &&
     if (tree_eq T (T_ite b T1 T2)) then (
         (* Type unification *)
-        (j1 ?= (TJ I1 Θ ((x, T_equiv b ttrue)::Γ) t1 T1)) && (is_valid d1)
-        && (j2 ?= (TJ I2 Θ ((x, T_equiv b tfalse)::Γ) t2 T2)) && (is_valid d2)
-        && (x ?∉ (fv T1))
-        && (x ?∉ (fv T2))
+        (j1 ?= (TJ I1 Θ ((x1, T_equiv b ttrue)::Γ) t1 T1)) && (is_valid d1)
+        && (j2 ?= (TJ I2 Θ ((x2, T_equiv b tfalse)::Γ) t2 T2)) && (is_valid d2)
+        && (x1 ?∉ (fv T1))
+        && (x2 ?∉ (fv T2))
       )
     else (
         (* Same type *)
-        (j1 ?= (TJ I1 Θ ((x, T_equiv b ttrue)::Γ) t1 T)) && (is_valid d1)
-        && (j2 ?= (TJ I2 Θ ((x, T_equiv b tfalse)::Γ) t2 T)) && (is_valid d2)
-        && (x ?∉ (fv T))
+        (j1 ?= (TJ I1 Θ ((x1, T_equiv b ttrue)::Γ) t1 T)) && (is_valid d1)
+        && (j2 ?= (TJ I2 Θ ((x2, T_equiv b tfalse)::Γ) t2 T)) && (is_valid d2)
+        && (x1 ?∉ (fv T)) && (x2 ?∉ (fv T))
       )
 
 
@@ -436,6 +437,7 @@ Ltac subset_open :=
   end.
 Hint Extern 50 => eapply support_open: deriv.
 Hint Rewrite PeanoNat.Nat.eqb_neq: deriv.
+Hint Rewrite PeanoNat.Nat.eqb_eq: deriv.
 
 Ltac soundness_finish :=
   repeat destruct_and || assumption ||  match goal with
@@ -476,7 +478,7 @@ Proof.
   (* Finish pattern matching deconstruction *)
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
-  all: repeat subst || light_bool || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens || simpl || consume_is_valid .
+  all: repeat subst || light_bool || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens || simpl || consume_is_valid || destruct_or.
   (* remove easy cases *)
   all: eauto 2 with deriv.
   all: try discriminate.
@@ -487,11 +489,13 @@ Proof.
       | H: (is_nat_value ?t) |- [[?Θ; ?Γ ⊨ (succ ?t) : T_nat]] => apply (annotated_reducible_nat_value Θ Γ (succ t) (INVSucc t H)); cbv
       | H: _
         |- [[?Θ; ?Γ ⊨ (tmatch ?tn ?t0 ?ts) : ?T]] => apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3)
-      | H: [[?Θ; (?n3, _)::?Γ ⊨ ?t3 : _ ]]
+      | H1: [[?Θ; (?x1, T_equiv _ ttrue)::?Γ ⊨ _ : _ ]],
+        H2: [[?Θ; (?x2, T_equiv _ tfalse)::?Γ ⊨ _ : _ ]]
         |- [[?Θ; ?Γ ⊨ (ite ?t1 ?t2 ?t3) : (T_ite _ ?T1 ?T2)]] =>
-        (apply (annotated_reducible_T_ite Θ Γ t1 t2 t3 T1 T2 n3))
-      | H:_
-        |- [[?Θ; ?Γ ⊨ (ite ?t1 ?t2 ?t3) : ?T ]] => eapply annotated_reducible_ite
+        (apply (annotated_reducible_T_ite Θ Γ t1 t2 t3 T1 T2 x1 x2))
+      | H1: [[?Θ; (?x1, T_equiv _ ttrue)::?Γ ⊨ _ : _ ]],
+        H2: [[?Θ; (?x2, T_equiv _ tfalse)::?Γ ⊨ _ : _ ]]
+        |- [[?Θ; ?Γ ⊨ (ite ?t1 ?t2 ?t3) : ?T ]] => apply (annotated_reducible_ite Θ Γ t1 t2 t3 T x1 x2)
       | H: [[?Θ; ?Γ ⊨ ?t : (T_prod ?A ?B)]]
         |- [[?Θ; ?Γ ⊨ (pi1 ?t) : ?A]] => apply (annotated_reducible_pi1 Θ Γ t A B)
       | H: [[?Θ; ?Γ ⊨ ?t : (T_prod ?A ?B)]]
@@ -521,6 +525,6 @@ Proof.
       |H: [[?Θ;?Γ ⊨ ?t : ?T_prod ?A ?B ]]
        |-  [[?Θ;?Γ ⊨ ?t ≡ (pp (pi1 ?t) (pi2 ?t))]] => apply (annotated_equivalent_pair_ext Θ Γ t A B)
       end; eauto; soundness_finish.
-Qed.
+  Qed.
 
 Show Ltac Profile.

@@ -14,6 +14,7 @@ Require Export SystemFR.AnnotatedEquivalent.
 Require Export SystemFR.AnnotatedEquivalentContext.
 Require Export SystemFR.AnnotatedEquivalentElim.
 Require Export SystemFR.AnnotatedEquivalentPairExt.
+Require Export SystemFR.AnnotatedSub.
 
 Import Coq.Strings.String.
 Import Coq.Bool.Bool.
@@ -277,26 +278,19 @@ Hint Rewrite is_erased_termb_prop: deriv.
 Inductive TJ_name :=
 | J_Nat
 | J_Match
-
 | J_Bool
 | J_If
-
 | J_PP
 | J_Pi1 | J_Pi2
-
 | J_App
 | J_Lambda
-
 | J_Left | J_Right
 | J_SumMatch : tree -> TJ_name
-
 | J_Let : tree -> TJ_name
-
 | J_Var | J_VarWeaken
-
 | J_Fix
-
-| J_equiv_elim.
+| J_equiv_elim
+| J_drop.
 
 Inductive StJ_name :=
 | StJ_sub.

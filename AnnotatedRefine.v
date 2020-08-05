@@ -21,7 +21,6 @@ Lemma annotated_reducible_refine:
     subset (fv t) (support gamma) ->
     subset (fv b) (support gamma) ->
     [[ tvars; gamma ⊨ t : A ]] ->
-    [[ tvars; (x,A) :: gamma ⊨ open 0 b (fvar x term_var) : T_bool ]] ->
     [[ tvars; (p, T_equiv (fvar x term_var) t) :: (x,A) :: gamma ⊨ open 0 b (fvar x term_var) ≡ ttrue ]] ->
     [[ tvars; gamma ⊨ t : T_refine A b ]].
 Proof.

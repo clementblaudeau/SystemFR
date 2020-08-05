@@ -154,6 +154,9 @@ Fixpoint is_valid(dv: derivation) : bool :=
   | N (TJ J_Var _ Γ (fvar x term_var) T) nil =>
     (option_tree_dec_eq (lookup PeanoNat.Nat.eq_dec Γ x) (Some T))
     && (wfb T 0) && (subsetb (fv T) (support Γ))
+  | N (TJ J_drop Θ Γ t T2)
+      ((N ((TJ I1 _ _ _ T1) as j1) _ as d1)::nil) =>
+    (j1 ?= (TJ I1 Θ Γ t T1)) && (is_valid d1) && (tree_eq T2 (drop_refinement T1))
 
   (* Var - weaken *)
   | N (TJ J_VarWeaken Θ ((x,T)::Γ) u U)
@@ -362,7 +365,10 @@ Lemma subset_open_open: forall k1 k2 t n3 n2 n1 A,
   apply (support_open t (fvar n3 term_var) term_var k2 (n1::n2::n3::A) H_temp3 H_temp2).
 Qed.
 
-Lemma is_valid_support_term_aux : forall dv, is_valid dv = true -> subset (fv (J_term1 (root dv)) ) (support (J_context (root dv))) /\ subset (fv (J_term2 (root dv)) ) (support (J_context (root dv))).
+Lemma is_valid_support_term_aux :
+  forall dv, is_valid dv = true ->
+        subset (fv (J_term1 (root dv)) ) (support (J_context (root dv))) /\
+        subset (fv (J_term2 (root dv)) ) (support (J_context (root dv))).
 Proof.
   induction dv using derivation_ind.
   intros. unfold root, J_term1, J_term2, fv. unfold forallP in X.
@@ -486,6 +492,7 @@ Proof.
   all:
     try
       match goal with
+        | H: _ |- [[?Θ; ?Γ ⊨ ?t : drop_refinement ?T]] => eapply annotated_reducible_drop
       | H: (is_nat_value ?t) |- [[?Θ; ?Γ ⊨ (succ ?t) : T_nat]] => apply (annotated_reducible_nat_value Θ Γ (succ t) (INVSucc t H)); cbv
       | H: _
         |- [[?Θ; ?Γ ⊨ (tmatch ?tn ?t0 ?ts) : ?T]] => apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3)

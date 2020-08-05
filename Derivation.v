@@ -154,9 +154,21 @@ Fixpoint is_valid(dv: derivation) : bool :=
   | N (TJ J_Var _ Γ (fvar x term_var) T) nil =>
     (option_tree_dec_eq (lookup PeanoNat.Nat.eq_dec Γ x) (Some T))
     && (wfb T 0) && (subsetb (fv T) (support Γ))
+
+  (* Drop refinement *)
   | N (TJ J_drop Θ Γ t T2)
       ((N ((TJ I1 _ _ _ T1) as j1) _ as d1)::nil) =>
     (j1 ?= (TJ I1 Θ Γ t T1)) && (is_valid d1) && (tree_eq T2 (drop_refinement T1))
+  (* Add refinement *)
+  | N (TJ J_refine Θ Γ t (T_refine A b))
+      (( N ((TJ I1 _ _ _ _) as j1) _ as d1)
+         :: ( N ((EJ I2 _ ((p, _)::(x, _)::_) B ttrue) as j2) _ as d2):: nil) =>
+    (j1 ?= (TJ I1 Θ Γ t A)) && (is_valid d1)
+    && (j2 ?= (EJ I2 Θ ((p, T_equiv (fvar x term_var) t) :: (x,A) :: Γ) (open 0 b (fvar x term_var)) ttrue)) && (is_valid d2)
+    && (p ?∉ (fv_context Γ)) && (p ?∉ (fv b)) && (p ?∉ (fv t)) && (p ?∉ (fv A)) && (p ?∉ Θ)
+    && (x ?∉ (fv_context Γ)) && (x ?∉ (fv b)) && (x ?∉ (fv t)) && (x ?∉ (fv A)) && (x ?∉ Θ)
+    && (x ?<> p) && (is_annotated_termb b) && ((fv b) ?⊂ (fv_context Γ))
+
 
   (* Var - weaken *)
   | N (TJ J_VarWeaken Θ ((x,T)::Γ) u U)
@@ -423,11 +435,9 @@ Hint Resolve is_valid_wf_T: deriv.
 
 Ltac consume_is_valid :=
   match goal with
-  | H: is_valid (N (TJ ?n ?Θ ?Γ ?t ?T) ?c) = true |- _ =>
-    epose proof (is_valid_wf_t n Θ Γ t T c H) ;
-    epose proof (is_valid_wf_T n Θ Γ t T c H) ;
-    epose proof (is_valid_support_t n Θ Γ t T c H) ;
-    epose proof (is_valid_support_T n Θ Γ t T c H) ; clear H
+  | H: is_valid ?dv = true |- _ =>
+    epose proof (is_valid_support_term_aux dv H) ;
+    epose proof (is_valid_wf_aux dv H) ; clear H
   end.
 
 
@@ -484,7 +494,7 @@ Proof.
   (* Finish pattern matching deconstruction *)
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
-  all: repeat subst || light_bool || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens || simpl || consume_is_valid || destruct_or.
+  all: repeat subst || rewrite_deriv || light_bool || invert_constructor_equalities || inst_list_prop || modus_ponens || simpl || consume_is_valid || destruct_or || destruct_and.
   (* remove easy cases *)
   all: eauto 2 with deriv.
   all: try discriminate.
@@ -492,7 +502,8 @@ Proof.
   all:
     try
       match goal with
-        | H: _ |- [[?Θ; ?Γ ⊨ ?t : drop_refinement ?T]] => eapply annotated_reducible_drop
+      | H: _ |- [[?Θ; ?Γ ⊨ ?t : drop_refinement ?T]] => eapply annotated_reducible_drop
+      | H: [[ ?Θ ; ((?p, _)::(?x,_)::_) ⊨ (open _ ?b _) ≡ ttrue ]] |- [[ ?Θ ; ?Γ ⊨ ?t : T_refine _ _ ]] => eapply (annotated_reducible_refine Θ Γ _ _ _  x p); eauto
       | H: (is_nat_value ?t) |- [[?Θ; ?Γ ⊨ (succ ?t) : T_nat]] => apply (annotated_reducible_nat_value Θ Γ (succ t) (INVSucc t H)); cbv
       | H: _
         |- [[?Θ; ?Γ ⊨ (tmatch ?tn ?t0 ?ts) : ?T]] => apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3)

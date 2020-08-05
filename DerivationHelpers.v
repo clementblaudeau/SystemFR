@@ -15,6 +15,7 @@ Require Export SystemFR.AnnotatedEquivalentContext.
 Require Export SystemFR.AnnotatedEquivalentElim.
 Require Export SystemFR.AnnotatedEquivalentPairExt.
 Require Export SystemFR.AnnotatedSub.
+Require Export SystemFR.AnnotatedRefine.
 
 Import Coq.Strings.String.
 Import Coq.Bool.Bool.
@@ -290,7 +291,8 @@ Inductive TJ_name :=
 | J_Var | J_VarWeaken
 | J_Fix
 | J_equiv_elim
-| J_drop.
+| J_drop
+| J_refine.
 
 Inductive StJ_name :=
 | StJ_sub.
@@ -348,9 +350,20 @@ Definition children {T} nt : (list (NodeTree T)) :=
 
 
 Lemma TJ_term1_root : forall n Θ Γ t T c, J_term1 (root (N (TJ n Θ Γ t T) c)) = t. Proof. steps. Qed.
+Lemma EJ_term1_root : forall n Θ Γ t T c, J_term1 (root (N (EJ n Θ Γ t T) c)) = t. Proof. steps. Qed.
+Lemma StJ_term1_root : forall n Θ Γ t T c, J_term1 (root (N (StJ n Θ Γ t T) c)) = t. Proof. steps. Qed.
+
 Lemma TJ_term2_root : forall n Θ Γ t T c, J_term2 (root (N (TJ n Θ Γ t T) c)) = T. Proof. steps. Qed.
+Lemma EJ_term2_root : forall n Θ Γ t T c, J_term2 (root (N (EJ n Θ Γ t T) c)) = T. Proof. steps. Qed.
+Lemma StJ_term2_root : forall n Θ Γ t T c, J_term2 (root (N (StJ n Θ Γ t T) c)) = T. Proof. steps. Qed.
+
 Lemma TJ_context_root : forall n Θ Γ t T c, J_context (root (N (TJ n Θ Γ t T) c)) = Γ. Proof. steps. Qed.
-Hint Rewrite TJ_term1_root TJ_term2_root TJ_context_root: deriv.
+Lemma EJ_context_root : forall n Θ Γ t T c, J_context (root (N (EJ n Θ Γ t T) c)) = Γ. Proof. steps. Qed.
+Lemma StJ_context_root : forall n Θ Γ t T c, J_context (root (N (StJ n Θ Γ t T) c)) = Γ. Proof. steps. Qed.
+
+Hint Rewrite TJ_term1_root EJ_term1_root StJ_term1_root
+     TJ_term2_root EJ_term2_root StJ_term2_root
+     TJ_context_root EJ_context_root StJ_context_root : deriv.
 
 Definition derivation := NodeTree Judgment.
 

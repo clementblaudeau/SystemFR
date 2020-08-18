@@ -257,10 +257,10 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (tree_eq T (pp (pi1 t) (pi2 t)))
     && (is_annotated_termb t)
 
-  (* SMT solver (trusted)
-  | N (EJ E_SMT Θ Γ t1 t2)
-      ((N ((E I1 _ _ _ _) as j1) _ as d1)
-         :: (N ((EJ I2 _ _ _ _) as j2) _ as d2) :: nil) => *)
+  (* SMT solver (trusted) *)
+  | N (EJ E_SMT Θ Γ t1 t2) c =>
+    (List.forallb is_valid c) && (wfb t1 0) && (wfb t2 0)
+    && ((fv t1) ?⊂ (support Γ)) && ((fv t2) ?⊂ (support Γ))
 
   | _ => false
   end.
@@ -380,6 +380,9 @@ Hint Resolve is_valid_support_T: deriv.
 Hint Resolve is_valid_wf_t: deriv.
 Hint Resolve is_valid_wf_T: deriv.
 
+Lemma trustSMTSolver_ADMITTED : forall  Θ Γ t T c, is_valid (N (EJ E_SMT Θ Γ t T) c) = true -> [[Θ;Γ ⊨ t ≡ T]].
+Admitted.
+
 
 Ltac consume_is_valid :=
   match goal with
@@ -436,17 +439,17 @@ Hint Rewrite isValueCorrect: deriv.
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
 Proof.
   induction dv using derivation_ind.
-  intros. unfold root, J_term1, J_term2, fv. unfold forallP in X.
+  intros. unfold root, J_term1, J_term2, fv, is_true. unfold forallP in X.
   destruct J.
   pose proof (subset_context_support Γ).
   (* Finish pattern matching deconstruction *)
-  all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
+  all: cbn in H; repeat (destruct_match; try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
   all: repeat subst || rewrite_deriv || light_bool || invert_constructor_equalities || inst_list_prop || modus_ponens || simpl || consume_is_valid || destruct_or || destruct_and.
+  all: repeat match goal with | H: is_true (root _) |- _ => simpl in H end.
   (* remove easy cases *)
   all: eauto 2 with deriv.
   all: try discriminate.
-  all: repeat  match goal with | H: is_true (root _) |- _ => simpl in H end.
   all:
     try
       match goal with
@@ -492,6 +495,9 @@ Proof.
       |H: [[?Θ;?Γ ⊨ ?t : ?T_prod ?A ?B ]]
        |-  [[?Θ;?Γ ⊨ ?t ≡ (pp (pi1 ?t) (pi2 ?t))]] => apply (annotated_equivalent_pair_ext Θ Γ t A B)
       end; eauto; soundness_finish.
+  assert (is_valid (N (EJ E_SMT Θ Γ t T) c) = true).
+  cbn; repeat bools || steps || autorewrite with deriv; eauto.
+  eauto using trustSMTSolver_ADMITTED.
   Qed.
 
 Show Ltac Profile.

@@ -16,6 +16,7 @@ Require Export SystemFR.AnnotatedEquivalentElim.
 Require Export SystemFR.AnnotatedEquivalentPairExt.
 Require Export SystemFR.AnnotatedSub.
 Require Export SystemFR.AnnotatedRefine.
+Require Export SystemFR.AnnotatedQuant.
 Require Export SystemFR.DerivationHelpers.
 
 Require Import Psatz.
@@ -37,7 +38,8 @@ Inductive TJ_name :=
 | J_Fix
 | J_equiv_elim
 | J_drop
-| J_refine.
+| J_refine
+| J_forall_inst.
 
 Inductive StJ_name :=
 | StJ_sub.
@@ -49,6 +51,7 @@ Inductive EJ_name :=
 | E_context : tree -> EJ_name
 | E_lambdas
 | E_pair_ext
+| E_SMT
 .
 
 Inductive Judgment:=

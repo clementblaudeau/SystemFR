@@ -200,6 +200,15 @@ Fixpoint is_valid(dv: derivation) : bool :=
     (j1 ?= (EJ I1 Θ Γ t1 t2)) && (is_valid d1)
     && (j2 ?= (TJ I2 Θ Γ t1 T)) && (is_valid d2)
 
+  (* Forall Instantiation *)
+  | N (TJ J_forall_inst Θ Γ (forall_inst t1 t2) T2)
+      (( N ((TJ I1 _ _ _ (T_forall U V)) as j1) _ as d1)
+         :: ( N ((TJ I2 _ _ _ _) as j2) _ as d2)::nil) =>
+    (j1 ?= (TJ I1 Θ Γ t1 (T_forall U V))) && (is_valid d1)
+    && (j2 ?= (TJ I2 Θ Γ t2 U)) && (is_valid d2)
+    && (tree_eq T2 (open 0 V t2))
+    && ((fv t1) ?⊂ (support Γ)) && ((fv t2) ?⊂ (support Γ)) && ((fv V) ?⊂ (support Γ))
+    && (is_annotated_typeb V) && (is_annotated_termb t2)
 
   (* EQUIVALENCE JUDGMENTS *)
   (* Symetric *)
@@ -248,75 +257,15 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (tree_eq T (pp (pi1 t) (pi2 t)))
     && (is_annotated_termb t)
 
+  (* SMT solver (trusted)
+  | N (EJ E_SMT Θ Γ t1 t2)
+      ((N ((E I1 _ _ _ _) as j1) _ as d1)
+         :: (N ((EJ I2 _ _ _ _) as j2) _ as d2) :: nil) => *)
+
   | _ => false
   end.
 
-Lemma subset_context_support: forall Γ, subset (support Γ) (fv_context Γ).
-Proof.
-  intros Γ x.
-  eauto using fv_context_support.
-Qed.
-Hint Resolve subset_context_support: deriv.
 
-
-Fixpoint check_fv_context (Θ:list nat) Γ : bool :=
-  match Γ with
-  | nil => true
-  | (x,T)::Γ' => check_fv_context Θ Γ' &&
-               ((fv T) ?⊂ (support Γ')) &&
-               (x ?∈ (support Γ' )) &&
-               ((pfv T type_var) ?⊂ Θ)
-  end.
-
-
-Lemma ex_falso_quolibet : forall P, false = true  -> P.
-Proof.
-  intros.
-  congruence.
-Qed.
-Lemma trueAndTrue : True /\ True.
-Proof.
-  steps.
-Qed.
-
-Lemma inList1 : forall {T} n (l: list T), n ∈ n::l.
-Proof.
-  steps.
-Qed.
-
-Lemma inList2 : forall {T} n n0 (l: list T), n ∈ n0::n::l.
-Proof.
-  steps.
-Qed.
-
-Lemma inList3 : forall {T} n n0 n1 (l: list T), n ∈ n1::n0::n::l.
-Proof.
-  steps.
-Qed.
-
-Ltac inst_list_prop:=
- match goal with
-  | H: forall x, x ∈ ?a1::nil ->  _ |- _ =>
-    pose proof (H a1 (inList1 a1 nil)); clear H
-  | H: forall x, x ∈ ?a1::?a2::nil -> _ |- _ =>
-    pose proof (H a1 (inList1 a1 _));
-    pose proof (H a2 (inList2 a2 a1 _)); clear H
-  | H: forall x, x ∈ ?a1::?a2::?a3::nil -> _ |- _ =>
-    pose proof (H a1 (inList1 a1 _) );
-    pose proof (H a2 (inList2 a2 a1 _) );
-    pose proof (H a3 (inList3 a3 a2 a1 _) ); clear H
- end.
-
-Ltac modus_ponens :=
-  match goal with
-  | H1: ?A , H2: ?A -> _ |- _ => pose proof (H2 H1) ; clear H2
-  end.
-
-
-Ltac light_bool :=
-  match goal with
-  | H: _ |- _ => rewrite_strat hints bools in H
-  end || destruct_and.
 
 Ltac rewrite_deriv :=
   match goal with
@@ -325,7 +274,6 @@ Ltac rewrite_deriv :=
 
 Ltac destruct_clear t H := destruct t; try apply (ex_falso_quolibet _ H).
 
-Hint Rewrite isNat_Correct : deriv.
 
 Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_term1 (root dv)) 0 /\ wf (J_term2 (root dv)) 0.
 Proof.
@@ -533,6 +481,7 @@ Proof.
       | H: ?x <> ?p
         |- [[?Θ; ?Γ ⊨ (tlet ?t1 ?A ?t2) : _]] => apply (annotated_reducible_let Θ Γ t1 t2 x p A)
       | H: [[ ?Θ; (?p,_)::(?y,_)::(?n,_)::?Γ ⊨ _ : _ ]] |-  [[?Θ; ?Γ ⊨ (tfix ?t1 ?t2) : (T_forall T_nat ?t1)]] => apply (annotated_reducible_fix_strong_induction Θ Γ t2 t1 n y p)
+                                                                                                                    | H: [[ ?Θ; ?Γ ⊨ ?t1 : (T_forall ?U ?V)]], H2 : [[_; _ ⊨ ?t2 : ?U]] |- _ => apply (annotated_reducible_forall_inst Θ Γ t1 t2 U V)
       |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]], H2: [[?Θ; ?Γ ⊨ ?t2 ≡ ?t3]] |- [[?Θ; ?Γ ⊨ ?t1 ≡ ?t3 ]] => apply (annotated_equivalent_trans Θ Γ t1 t2 t3 H H2)
       |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]] |- [[?Θ; ?Γ ⊨ ?t2 ≡ ?t1 ]] => apply (annotated_equivalent_sym Θ Γ t1 t2 H)
       |H: _ |- [[?Θ; ?Γ ⊨ ?t ≡ ?t ]] => apply (annotated_equivalent_refl Θ Γ t)

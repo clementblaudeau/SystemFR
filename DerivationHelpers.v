@@ -40,6 +40,7 @@ Hint Resolve annotated_reducible_sum_match: deriv.
 Hint Resolve annotated_reducible_let: deriv.
 Hint Resolve annotated_reducible_var: deriv.
 Hint Resolve annotated_reducible_weaken: deriv.
+Hint Rewrite isNat_Correct : deriv.
 
 Hint Rewrite tree_eq_prop: deriv.
 
@@ -405,3 +406,72 @@ Proof.
   rewrite Inb_prop3.
   reflexivity.
 Qed.
+
+
+
+Lemma subset_context_support: forall Γ, subset (support Γ) (fv_context Γ).
+Proof.
+  intros Γ x.
+  eauto using fv_context_support.
+Qed.
+Hint Resolve subset_context_support: deriv.
+
+
+Fixpoint check_fv_context (Θ:list nat) Γ : bool :=
+  match Γ with
+  | nil => true
+  | (x,T)::Γ' => check_fv_context Θ Γ' &&
+               ((fv T) ?⊂ (support Γ')) &&
+               (x ?∈ (support Γ' )) &&
+               ((pfv T type_var) ?⊂ Θ)
+  end.
+
+
+Lemma ex_falso_quolibet : forall P, false = true  -> P.
+Proof.
+  intros.
+  congruence.
+Qed.
+Lemma trueAndTrue : True /\ True.
+Proof.
+  steps.
+Qed.
+
+Lemma inList1 : forall {T} n (l: list T), n ∈ n::l.
+Proof.
+  steps.
+Qed.
+
+Lemma inList2 : forall {T} n n0 (l: list T), n ∈ n0::n::l.
+Proof.
+  steps.
+Qed.
+
+Lemma inList3 : forall {T} n n0 n1 (l: list T), n ∈ n1::n0::n::l.
+Proof.
+  steps.
+Qed.
+
+Ltac inst_list_prop:=
+ match goal with
+  | H: forall x, x ∈ ?a1::nil ->  _ |- _ =>
+    pose proof (H a1 (inList1 a1 nil)); clear H
+  | H: forall x, x ∈ ?a1::?a2::nil -> _ |- _ =>
+    pose proof (H a1 (inList1 a1 _));
+    pose proof (H a2 (inList2 a2 a1 _)); clear H
+  | H: forall x, x ∈ ?a1::?a2::?a3::nil -> _ |- _ =>
+    pose proof (H a1 (inList1 a1 _) );
+    pose proof (H a2 (inList2 a2 a1 _) );
+    pose proof (H a3 (inList3 a3 a2 a1 _) ); clear H
+ end.
+
+Ltac modus_ponens :=
+  match goal with
+  | H1: ?A , H2: ?A -> _ |- _ => pose proof (H2 H1) ; clear H2
+  end.
+
+
+Ltac light_bool :=
+  match goal with
+  | H: _ |- _ => rewrite_strat hints bools in H
+  end || destruct_and.

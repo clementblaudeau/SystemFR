@@ -39,7 +39,9 @@ Inductive TJ_name :=
 | J_equiv_elim
 | J_drop
 | J_refine
+| J_refine_unfold
 | J_forall_inst.
+
 
 Inductive StJ_name :=
 | StJ_sub.

@@ -475,3 +475,124 @@ Ltac light_bool :=
   match goal with
   | H: _ |- _ => rewrite_strat hints bools in H
   end || destruct_and.
+
+
+(* Unfold refinement in context *)
+Fixpoint refinementUnfoldInContext Γ1 Γ2 :=
+  match Γ1, Γ2 with
+  | ((x, T_refine ty P)::Γ1') , ((p, T_equiv Px ttrue)::(y, ty')::Γ2') =>
+    if ((PeanoNat.Nat.eqb x y) && (tree_eq ty ty') && (tree_eq Px (open 0 P (fvar x term_var)))
+        && (context_eq Γ1' Γ2'))
+    then Some (x,p,ty,P)
+    else None
+  | (x1,t1)::Γ1',(x2,t2)::Γ2' =>
+    if (PeanoNat.Nat.eqb x1 x2 && tree_eq t1 t2)
+    then (refinementUnfoldInContext Γ1' Γ2')
+    else None
+  | _,_ => None
+  end.
+
+Lemma refinementUnfoldInContext_nil :
+  forall Γ, refinementUnfoldInContext Γ nil = None.
+Proof. destruct Γ; steps. Qed.
+
+Lemma if_same_result :
+  forall A (b:bool) (a:A), (if b then a else a) = a.
+Proof. steps. Qed.
+
+
+Lemma refinementUnfoldInContext_nil2 :
+  forall Γ x, refinementUnfoldInContext Γ (x::nil) = None.
+Proof. destruct Γ. steps.
+       destruct p, x, t ; repeat
+         try solve [simpl; rewrite refinementUnfoldInContext_nil, if_same_result; reflexivity] ||
+       destruct t0 ||
+       destruct t0_2.
+Qed.
+
+
+Lemma refinementUnfoldInContext_same_head :
+  forall Γ Γ1 Γ2, refinementUnfoldInContext (Γ++Γ1) (Γ++Γ2) = refinementUnfoldInContext Γ1 Γ2.
+Proof.
+  induction Γ. steps.
+  intros.
+  destruct a.
+  assert (PeanoNat.Nat.eqb n n = true). rewrite PeanoNat.Nat.eqb_eq; eauto.
+  assert (tree_eq t t = true). rewrite tree_eq_prop; eauto.
+  destruct t eqn: T; repeat rewrite_any || simpl || reflexivity.
+Qed.
+
+Lemma refinementUnfoldInContext_prop :
+  forall Γ1 Γ2 x p ty P,
+    refinementUnfoldInContext Γ1 Γ2 = Some (x,p,ty,P) <->
+    exists Γ Γ', (Γ1 = Γ++(x,T_refine ty P)::Γ' /\ Γ2 = Γ++(p, T_equiv (open 0 P (fvar x term_var)) ttrue)::(x,ty)::Γ').
+  split; intros.
+  + (* -> *)
+    generalize dependent Γ2; induction Γ1; intros.
+    ++ unfold refinementUnfoldInContext; steps.
+    ++ destruct Γ2; try solve [ rewrite refinementUnfoldInContext_nil in H; discriminate].
+       destruct Γ2; try solve [ rewrite refinementUnfoldInContext_nil2 in H; discriminate].
+       destruct a, p0, p1.
+       destruct t eqn: T;
+         try solve [
+               simpl in *; destruct_match; try discriminate;
+               pose proof (IHΓ1 ((n1,t1)::Γ2) H) as [Γ [Γ' [Hg1 Hg2] ] ];
+               bools; destruct_and; rewrite tree_eq_prop, PeanoNat.Nat.eqb_eq in *;
+               exists ((n0,t)::Γ),Γ';  subst; rewrite_any; steps ] ;
+       destruct t0 eqn: T0;
+         try solve [
+               simpl in *; destruct_match; try discriminate;
+               pose proof (IHΓ1 ((n1,t1)::Γ2) H) as [Γ [Γ' [Hg1 Hg2] ] ];
+               bools; destruct_and; rewrite tree_eq_prop, PeanoNat.Nat.eqb_eq in *;
+               exists ((n0,t)::Γ),Γ';  subst; rewrite_any; steps ] ;
+       destruct t2_4 eqn: T2_4;
+         try solve [
+               simpl in *; destruct_match; try discriminate;
+               pose proof (IHΓ1 ((n1,t1)::Γ2) H) as [Γ [Γ' [Hg1 Hg2] ] ];
+               bools; destruct_and; rewrite tree_eq_prop, PeanoNat.Nat.eqb_eq in *;
+               exists ((n0,t)::Γ),Γ';  subst; rewrite_any; steps ].
+       subst; simpl in H.
+       destruct_match; try discriminate. bools. steps.
+       rewrite tree_eq_prop, PeanoNat.Nat.eqb_eq in *.
+       subst; exists nil, Γ1.
+       assert (Γ1 = Γ2); unfold context_eq in H1; steps.
+  + (* <- *)
+    steps; induction Γ;
+      repeat rewrite refinementUnfoldInContext_same_head ||
+             steps || bools || list_utils ||
+             rewrite PeanoNat.Nat.eqb_neq in * || unfold tree_eq,context_eq in * .
+Qed.
+
+
+Lemma refinementUnfoldInContext_fv :
+  forall Γ1 Γ2 x p ty P tag,
+    refinementUnfoldInContext Γ1 Γ2 = Some (x,p,ty,P) ->
+    forall x, x ∈ (pfv_context Γ2 tag) <-> (x = p \/ x ∈ (pfv_context Γ1 tag)).
+Proof.
+  intros.
+  rewrite refinementUnfoldInContext_prop in *.
+  repeat steps || list_utils || fv_open ; eauto with sets fv.
+Qed.
+
+
+Lemma refinementUnfoldInContext_support1 :
+  forall Γ1 Γ2 x p ty P,
+    refinementUnfoldInContext Γ1 Γ2 = Some (x,p,ty,P) ->
+    forall y, y ∈ support Γ2 ->
+         y <> p ->
+         y ∈ support Γ1.
+Proof.
+  intros.
+  rewrite refinementUnfoldInContext_prop in *.
+  repeat steps || list_utils || fv_open ; eauto with sets fv.
+Qed.
+
+Lemma refinementUnfoldInContext_support2 :
+  forall Γ1 Γ2 x p ty P,
+    refinementUnfoldInContext Γ1 Γ2 = Some (x,p,ty,P) ->
+    subset (support Γ1) (support Γ2).
+Proof.
+  intros.
+  rewrite refinementUnfoldInContext_prop in *.
+  repeat steps || list_utils || fv_open ; eauto with sets fv.
+Qed.

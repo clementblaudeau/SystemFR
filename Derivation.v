@@ -159,6 +159,21 @@ Fixpoint is_valid(dv: derivation) : bool :=
   | N (TJ J_drop Θ Γ t T2)
       ((N ((TJ I1 _ _ _ T1) as j1) _ as d1)::nil) =>
     (j1 ?= (TJ I1 Θ Γ t T1)) && (is_valid d1) && (tree_eq T2 (drop_refinement T1))
+
+  (* Unfold refinement *)
+  | N (TJ J_refine_unfold Θ Γ t T)
+      (( N ((TJ I1 _ Γ' _ _) as j1) _ as d1)::nil) =>
+    (j1 ?= (TJ I1 Θ Γ' t T)) && (is_valid d1) &&
+    match refinementUnfoldInContext Γ' Γ with
+    | Some (x, p, ty, P) => (
+        (p ?∉ fv t) && (p ?∉ fv T) && (p ?∉ fv P) && (p ?∉ fv ty) && (p ?∉ fv_context Γ)
+        && (is_annotated_termb P) && ((fv ty) ?⊂ (support Γ')) && ((fv P) ?⊂ (support Γ'))
+        && (wfb P 1))
+    | None => false
+    end
+
+
+
   (* Add refinement *)
   | N (TJ J_refine Θ Γ t (T_refine A b))
       (( N ((TJ I1 _ _ _ _) as j1) _ as d1)
@@ -325,6 +340,8 @@ Lemma subset_open_open: forall k1 k2 t n3 n2 n1 A,
   apply (support_open t (fvar n3 term_var) term_var k2 (n1::n2::n3::A) H_temp3 H_temp2).
 Qed.
 
+Hint Rewrite fv_context_append: deriv.
+
 Lemma is_valid_support_term_aux :
   forall dv, is_valid dv = true ->
         subset (fv (J_term1 (root dv)) ) (support (J_context (root dv))) /\
@@ -338,11 +355,13 @@ Proof.
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
   all: simpl; eauto 2 using subset_nil.
+  all: unfold fv_context in *.
   all: repeat subst || light_bool || rewrite_deriv || discriminate || rewrite pfv_fvar || rewrite pfv_fvar2 ||
               match goal with
               | H1: ~ ?x ∈ ?A, H2: subset ?A (?x::?B) |- _ => apply (subset_add3 _ x A B H1) in H2
               | H: subset (pfv (_ _ _) _) _ |- _ => simpl in H
               | H: subset _ (support (_::_)) |- _ => simpl in H
+              | H : subset (support (_++_)) _ |- _ => rewrite support_append in H
               | H: is_nat_value ?t |- subset (pfv ?t ?tag) ?A => rewrite nat_value_fv
               | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H
               | H: _ |- subset ( _ ++ _ ) _ => apply subset_union2; eauto
@@ -361,8 +380,10 @@ Proof.
                        H2: ~ ?n2 ∈ (fv ?t),
                            H3: ~ ?n1 ∈ (fv ?t)
                 |- subset (pfv ?t term_var) ?A  => apply (subset_open_open k1 k2 t n3 n2 n1 A H H1 H2 H3)
-            | H: subset( fv (_ _ _)) _ |- _ => cbn in H end
-
+              | H: subset( fv (_ _ _)) _ |- _ => cbn in H
+              | H: refinementUnfoldInContext ?Γ ?Γ0 = Some (?x, ?p, ?ty, ?P) |- _ =>
+                apply refinementUnfoldInContext_support2 in H
+              end
        || invert_constructor_equalities || apply support_open2|| inst_list_prop || modus_ponens || simpl || split;
     eauto 3 using singleton_subset, inList1, inList2, inList3 with sets.
 Qed.
@@ -379,6 +400,8 @@ Hint Resolve is_valid_support_T: deriv.
 
 Hint Resolve is_valid_wf_t: deriv.
 Hint Resolve is_valid_wf_T: deriv.
+
+(* Parameter SMT_Check (Θ Γ ... ) : Prop. *)
 
 Lemma trustSMTSolver_ADMITTED : forall  Θ Γ t T c, is_valid (N (EJ E_SMT Θ Γ t T) c) = true -> [[Θ;Γ ⊨ t ≡ T]].
 Admitted.
@@ -433,7 +456,6 @@ Ltac soundness_finish :=
                 |- subset (pfv ?t term_var) ?A  => apply (subset_open_open k1 k2 t n3 n2 n1 A H H1 H2 H3)
                                       end || rewrite pfv_fvar || rewrite pfv_fvar2 || simpl || unfold fv || rewrite_deriv.
 
-
 Hint Rewrite isValueCorrect: deriv.
 (* Main soundess result *)
 Lemma is_valid_soundess : forall dv, (is_valid dv) = true -> (is_true (root dv)).
@@ -450,6 +472,7 @@ Proof.
   (* remove easy cases *)
   all: eauto 2 with deriv.
   all: try discriminate.
+  all: unfold fv_context in *.
   all:
     try
       match goal with
@@ -494,7 +517,16 @@ Proof.
        |- [[ ?Θ ; ?Γ ⊨ ?t2 : ?T]] => apply (annotated_equivalent_elim Θ Γ t1 t2 T)
       |H: [[?Θ;?Γ ⊨ ?t : ?T_prod ?A ?B ]]
        |-  [[?Θ;?Γ ⊨ ?t ≡ (pp (pi1 ?t) (pi2 ?t))]] => apply (annotated_equivalent_pair_ext Θ Γ t A B)
+      | H: refinementUnfoldInContext ?Γ0 ?Γ = Some (?x, ?p, ?ty, ?P) |- [[ ?Θ ; ?Γ ⊨ ?t : ?T]] =>
+        let Γ := fresh Γ in
+        let Γ' := fresh Γ' in
+        let fH := fresh H in
+        rewrite refinementUnfoldInContext_prop in H; destruct H as [Γ [Γ' [H fH] ] ]; subst;
+          apply annotated_reducible_unfold_refine; eauto; rewrite support_append in *;
+            rewrite fv_context_append in *;
+            list_utils; steps
       end; eauto; soundness_finish.
+
   assert (is_valid (N (EJ E_SMT Θ Γ t T) c) = true).
   cbn; repeat bools || steps || autorewrite with deriv; eauto.
   eauto using trustSMTSolver_ADMITTED.

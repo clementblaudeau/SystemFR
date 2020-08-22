@@ -317,6 +317,24 @@ Proof.
   unfold weak_equivalent_subst; repeat step || apply_any.
 Qed.
 
+
+Lemma weak_equivalent_subst_rev:
+  forall (t : tree) (l1 l2 : map nat tree) (tag : fv_tag),
+    (forall x : nat, x ∈ support l1 -> x ∈ support l2 -> False) ->
+    weak_equivalent_subst (pfv t tag) (l1 ++ l2) (l2 ++ l1).
+Proof.
+  intros t l1 l2 tag H.
+  unfold weak_equivalent_subst; repeat steps || t_lookup || list_utils || t_lookupor;
+    try solve [
+          rewrite <- lookupAppendNoDup; steps; eauto ];
+    try solve [
+          exfalso; eapply_any; eauto;
+          rewrite_any; eauto using lookupSupport ];
+    try solve [
+          apply lookupWeaken; steps; eauto ].
+Qed.
+
+
 Lemma weak_subst_permutation:
   forall t l1 l2 tag,
     weak_equivalent_subst (pfv t tag) l1 l2 ->
@@ -333,6 +351,16 @@ Proof.
                     eauto with step_tactic list_utils
                  ]
            end.
+Qed.
+
+
+Lemma psubstitute_sym:
+  forall t l1 l2 tag,
+    (forall x, x ∈ support l1 -> x ∈ support l2 -> False) ->
+    psubstitute t (l1 ++ l2) tag = psubstitute t (l2 ++ l1) tag.
+Proof.
+  intros.
+  apply weak_subst_permutation, weak_equivalent_subst_rev; eauto.
 Qed.
 
 Lemma substitute_skip:

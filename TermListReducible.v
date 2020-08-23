@@ -53,6 +53,23 @@ Proof.
   apply_any; steps.
 Qed.
 
+Lemma satisfies_transform_equivalent:
+  forall Γ Γ' Θ t T,
+    [ Θ; Γ ⊨ t ≡ T] ->
+    (forall theta γ', satisfies (reducible_values theta) Γ' γ' ->
+                 (support theta = Θ) ->
+                 (valid_interpretation theta) ->
+           exists γ, satisfies (reducible_values theta) Γ γ /\
+                substitute t γ = substitute t γ' /\
+                substitute T γ = substitute T γ') ->
+    [ Θ; Γ' ⊨ t ≡ T].
+Proof.
+  unfold open_equivalent. steps.
+  instantiate_any; steps.
+  repeat rewrite_back_any.
+  eapply_any; steps; eauto.
+Qed.
+
 
 Lemma satisfies_modify:
   forall (Γ Γ' : list (nat * tree)) (x : nat) (ty ty' : tree) (theta : interpretation) (l1 : list (nat * tree))

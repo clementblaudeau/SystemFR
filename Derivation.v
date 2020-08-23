@@ -160,7 +160,7 @@ Fixpoint is_valid(dv: derivation) : bool :=
       ((N ((TJ I1 _ _ _ T1) as j1) _ as d1)::nil) =>
     (j1 ?= (TJ I1 Θ Γ t T1)) && (is_valid d1) && (tree_eq T2 (drop_refinement T1))
 
-  (* Unfold refinement *)
+  (* Unfold refinement - typing jugement version *)
   | N (TJ J_refine_unfold Θ Γ t T)
       (( N ((TJ I1 _ Γ' _ _) as j1) _ as d1)::nil) =>
     (j1 ?= (TJ I1 Θ Γ' t T)) && (is_valid d1) &&
@@ -264,6 +264,18 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (tree_eq T1 (open 0 C t1))
     && (tree_eq T2 (open 0 C t2))
     && (wfb C 1)
+
+  (* Unfold refinement - equivalence jugement version *)
+  | N (EJ E_refine_unfold Θ Γ t T)
+      (( N ((EJ I1 _ Γ' _ _) as j1) _ as d1)::nil) =>
+    (j1 ?= (EJ I1 Θ Γ' t T)) && (is_valid d1) &&
+    match refinementUnfoldInContext Γ' Γ with
+    | Some (x, p, ty, P) => (
+        (p ?∉ fv t) && (p ?∉ fv T) && (p ?∉ fv P) && (p ?∉ fv ty) && (p ?∉ fv_context Γ)
+        && (is_annotated_termb P) && ((fv ty) ?⊂ (support Γ')) && ((fv P) ?⊂ (support Γ'))
+        && (wfb P 1))
+    | None => false
+    end
 
   (* Pair ext *)
   | N (EJ E_pair_ext Θ Γ t T)
@@ -523,6 +535,14 @@ Proof.
         let fH := fresh H in
         rewrite refinementUnfoldInContext_prop in H; destruct H as [Γ [Γ' [H fH] ] ]; subst;
           apply annotated_reducible_unfold_refine; eauto; rewrite support_append in *;
+            rewrite fv_context_append in *;
+            list_utils; steps
+      | H: refinementUnfoldInContext ?Γ0 ?Γ = Some (?x, ?p, ?ty, ?P) |- [[ ?Θ ; ?Γ ⊨ ?t ≡ ?T]] =>
+        let Γ := fresh Γ in
+        let Γ' := fresh Γ' in
+        let fH := fresh H in
+        rewrite refinementUnfoldInContext_prop in H; destruct H as [Γ [Γ' [H fH] ] ]; subst;
+          apply annotated_reducible_equivalent_unfold_refine; eauto; rewrite support_append in *;
             rewrite fv_context_append in *;
             list_utils; steps
       end; eauto; soundness_finish.

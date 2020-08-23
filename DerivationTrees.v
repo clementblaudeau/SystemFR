@@ -53,6 +53,7 @@ Inductive EJ_name :=
 | E_context : tree -> EJ_name
 | E_lambdas
 | E_pair_ext
+| E_refine_unfold
 | E_SMT
 .
 

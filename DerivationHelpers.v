@@ -14,6 +14,7 @@ Require Export SystemFR.AnnotatedEquivalent.
 Require Export SystemFR.AnnotatedEquivalentContext.
 Require Export SystemFR.AnnotatedEquivalentElim.
 Require Export SystemFR.AnnotatedEquivalentPairExt.
+Require Export SystemFR.AnnotatedEquivalentRefine.
 Require Export SystemFR.AnnotatedSub.
 Require Export SystemFR.AnnotatedRefine.
 

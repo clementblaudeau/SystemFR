@@ -1,6 +1,7 @@
 Require Export SystemFR.Judgments.
 Require Export SystemFR.AnnotatedTactics.
 Require Export SystemFR.AnnotatedBool.
+Require Export SystemFR.AnnotatedUnit.
 Require Export SystemFR.AnnotatedNat.
 Require Export SystemFR.AnnotatedIte.
 Require Export SystemFR.AnnotatedArrow.
@@ -42,6 +43,7 @@ Hint Resolve annotated_reducible_let: deriv.
 Hint Resolve annotated_reducible_var: deriv.
 Hint Resolve annotated_reducible_weaken: deriv.
 Hint Rewrite isNat_Correct : deriv.
+Hint Resolve annotated_reducible_unit: deriv.
 
 Hint Rewrite tree_eq_prop: deriv.
 

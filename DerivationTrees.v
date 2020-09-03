@@ -1,6 +1,7 @@
 Require Export SystemFR.Judgments.
 Require Export SystemFR.AnnotatedTactics.
 Require Export SystemFR.AnnotatedBool.
+Require Export SystemFR.AnnotatedUnit.
 Require Export SystemFR.AnnotatedNat.
 Require Export SystemFR.AnnotatedIte.
 Require Export SystemFR.AnnotatedArrow.
@@ -23,6 +24,7 @@ Require Import Psatz.
 
 (* Judgments *)
 Inductive TJ_name :=
+| J_Unit
 | J_Nat
 | J_Match
 | J_Bool

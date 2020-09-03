@@ -9,9 +9,11 @@ Set Ltac Profiling.
 
 Fixpoint is_valid(dv: derivation) : bool :=
   match dv with
-  (* | N (InferJudgment "InferUnit" _ _ uu T_unit) nil => true *)
 
   (* TYPING JUDGMENTS *)
+
+  (* Unit *)
+  | N (TJ J_Unit _ _ uu T_unit ) nil => true
 
   (* Bools *)
   | N (TJ J_Bool _ _ ttrue T_bool) nil => true

@@ -25,29 +25,6 @@ Require Import Psatz.
 
 
 Create HintDb deriv.
-Hint Resolve annotated_reducible_true : deriv.
-Hint Resolve annotated_reducible_false: deriv.
-Hint Resolve annotated_reducible_zero: deriv.
-Hint Resolve annotated_reducible_succ: deriv.
-Hint Resolve annotated_reducible_match: deriv.
-Hint Resolve annotated_reducible_T_ite: deriv.
-Hint Resolve annotated_reducible_app: deriv.
-Hint Resolve annotated_reducible_lambda: deriv.
-Hint Resolve annotated_reducible_pp: deriv.
-Hint Resolve annotated_reducible_pi1: deriv.
-Hint Resolve annotated_reducible_pi2: deriv.
-Hint Resolve annotated_reducible_left: deriv.
-Hint Resolve annotated_reducible_right: deriv.
-Hint Resolve annotated_reducible_sum_match: deriv.
-Hint Resolve annotated_reducible_let: deriv.
-Hint Resolve annotated_reducible_var: deriv.
-Hint Resolve annotated_reducible_weaken: deriv.
-Hint Rewrite isNat_Correct : deriv.
-Hint Resolve annotated_reducible_unit: deriv.
-
-Hint Rewrite tree_eq_prop: deriv.
-
-
 
 
 (* Bool unequality *)

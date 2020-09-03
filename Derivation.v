@@ -174,8 +174,6 @@ Fixpoint is_valid(dv: derivation) : bool :=
     | None => false
     end
 
-
-
   (* Add refinement *)
   | N (TJ J_refine Θ Γ t (T_refine A b))
       (( N ((TJ I1 _ _ _ _) as j1) _ as d1)
@@ -227,6 +225,14 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && ((fv t1) ?⊂ (support Γ)) && ((fv t2) ?⊂ (support Γ)) && ((fv V) ?⊂ (support Γ))
     && (is_annotated_typeb V) && (is_annotated_termb t2)
 
+  (* Error *)
+  | N (TJ J_error Θ Γ (err t) T)
+      (( N ((EJ I1 _ _ tfalse ttrue) as j1) _ as d1) :: nil) =>
+    (j1 ?= (EJ I1 Θ Γ tfalse ttrue)) && (is_valid d1)
+    && (wfb T 0 )
+    && (tree_eq t T)
+    && ((fv T) ?⊂ (support Γ))
+
   (* EQUIVALENCE JUDGMENTS *)
   (* Symetric *)
   | N (EJ E_sym Θ Γ t1 t2)
@@ -237,8 +243,8 @@ Fixpoint is_valid(dv: derivation) : bool :=
   | N (EJ E_trans Θ Γ t1 t3)
       ((N ((EJ I1 _ _ _ t2) as j1) _ as d1)
          :: (N ((EJ I2 _ _ _ _) as j2) _ as d2) :: nil) =>
-       (j1 ?= (EJ I1 Θ Γ t1 t2)) && (is_valid d1)
-       && (j2 ?= (EJ I2 Θ Γ t2 t3)) && (is_valid d2)
+    (j1 ?= (EJ I1 Θ Γ t1 t2)) && (is_valid d1)
+    && (j2 ?= (EJ I2 Θ Γ t2 t3)) && (is_valid d2)
 
   (* Reflexivity *)
   | N (EJ E_refl Θ Γ t t') nil =>
@@ -314,11 +320,7 @@ Proof.
   all: repeat split; eauto with wf.
 Qed.
 
-Lemma is_valid_wf_t : forall n Θ Γ t T c, is_valid (N (TJ n Θ Γ t T) c) = true -> wf t 0.
-Proof. intros; pose proof (is_valid_wf_aux  (N (TJ n Θ Γ t T) c) H ); steps. Qed.
 
-Lemma is_valid_wf_T : forall n Θ Γ t T c, is_valid (N (TJ n Θ Γ t T) c) = true -> wf T 0.
-Proof. intros; pose proof (is_valid_wf_aux  (N (TJ n Θ Γ t T) c) H ); steps. Qed.
 
 Lemma subset_nil : forall {T} A, @subset T nil A.
 Proof.
@@ -403,18 +405,6 @@ Proof.
 Qed.
 
 
-Lemma is_valid_support_t : forall n Θ Γ t T c, is_valid (N (TJ n Θ Γ t T) c) = true -> subset (fv t) (support Γ).
-Proof. intros. pose proof (is_valid_support_term_aux  (N (TJ n Θ Γ t T) c) H ). steps. Qed.
-Hint Resolve is_valid_support_t: deriv.
-
-Lemma is_valid_support_T : forall n Θ Γ t T c, is_valid (N (TJ n Θ Γ t T) c) = true -> subset (fv T) (support Γ).
-Proof. intros. pose proof (is_valid_support_term_aux  (N (TJ n Θ Γ t T) c) H ). steps. Qed.
-Hint Resolve is_valid_support_T: deriv.
-
-
-Hint Resolve is_valid_wf_t: deriv.
-Hint Resolve is_valid_wf_T: deriv.
-
 (* Parameter SMT_Check (Θ Γ ... ) : Prop. *)
 
 Lemma trustSMTSolver_ADMITTED : forall  Θ Γ t T c, is_valid (N (EJ E_SMT Θ Γ t T) c) = true -> [[Θ;Γ ⊨ t ≡ T]].
@@ -445,29 +435,29 @@ Hint Rewrite PeanoNat.Nat.eqb_eq: deriv.
 
 Ltac soundness_finish :=
   repeat destruct_and || assumption ||  match goal with
-              | H1: ~ ?x ∈ ?A, H2: subset ?A (?x::?B) |- _ => apply (subset_add3 _ x A B H1) in H2
-              | H: subset _ (support (_::_)) |- _ => simpl in H
-              | H1: subset ?A ?B,
-                    H2: subset ?B ?C,
-                        H3: ~?n ∈ ?C
-                |- ~ ?n ∈ ?A => apply (in_subset_not _ _ n (subset_transitive _ _ _ H1 H2) H3)
-              | H: subset (fv (open ?k ?t1 ?t2)) ?A
-                |- subset (fv ?t1) _ => apply (support_open t1 t2 term_var k A) in H
-              | H: wf (open _ _ _) _ |- _ => apply wf_open_rev in H
-              | H: wf (_ _ _) _ |- _ => simpl in H
-              | H: NoDupb ?L |- List.NoDup ?L => apply NoDupb_prop
-              | H: subset (fv (_ _ _)) _ |- _ => cbn in H; apply subset_union3 in H
-              | H: _ |- subset (singleton ?n) (?n :: _) => apply singleton_subset, inList1
-              | H: ~ ?a ∈ ?L |- List.NoDup (?a::?L) => apply (List.NoDup_cons a H)
-              | H:_ |- List.NoDup (?a::nil) => apply (List.NoDup_cons a (@List.in_nil _ a))
-              | H:_ |- List.NoDup nil => apply List.NoDup_nil
-              | H: _ |- subset (singleton ?n) (_ :: ?n :: _) => apply singleton_subset, inList2
-              | H: _ |- subset (singleton ?n) (_ :: _ :: ?n :: _) => apply singleton_subset, inList3
-              | H: subset (fv (open ?k1 (open ?k2 ?t (fvar ?n3 term_var)) (fvar ?n2 term_var))) (?n1::?n2::?n3::?A),
-                   H1: ~ ?n3 ∈ (fv ?t),
-                       H2: ~ ?n2 ∈ (fv ?t),
-                           H3: ~ ?n1 ∈ (fv ?t)
-                |- subset (pfv ?t term_var) ?A  => apply (subset_open_open k1 k2 t n3 n2 n1 A H H1 H2 H3)
+                                      | H1: ~ ?x ∈ ?A, H2: subset ?A (?x::?B) |- _ => apply (subset_add3 _ x A B H1) in H2
+                                      | H: subset _ (support (_::_)) |- _ => simpl in H
+                                      | H1: subset ?A ?B,
+                                            H2: subset ?B ?C,
+                                                H3: ~?n ∈ ?C
+                                        |- ~ ?n ∈ ?A => apply (in_subset_not _ _ n (subset_transitive _ _ _ H1 H2) H3)
+                                      | H: subset (fv (open ?k ?t1 ?t2)) ?A
+                                        |- subset (fv ?t1) _ => apply (support_open t1 t2 term_var k A) in H
+                                      | H: wf (open _ _ _) _ |- _ => apply wf_open_rev in H
+                                      | H: wf (_ _ _) _ |- _ => simpl in H
+                                      | H: NoDupb ?L |- List.NoDup ?L => apply NoDupb_prop
+                                      | H: subset (fv (_ _ _)) _ |- _ => cbn in H; apply subset_union3 in H
+                                      | H: _ |- subset (singleton ?n) (?n :: _) => apply singleton_subset, inList1
+                                      | H: ~ ?a ∈ ?L |- List.NoDup (?a::?L) => apply (List.NoDup_cons a H)
+                                      | H:_ |- List.NoDup (?a::nil) => apply (List.NoDup_cons a (@List.in_nil _ a))
+                                      | H:_ |- List.NoDup nil => apply List.NoDup_nil
+                                      | H: _ |- subset (singleton ?n) (_ :: ?n :: _) => apply singleton_subset, inList2
+                                      | H: _ |- subset (singleton ?n) (_ :: _ :: ?n :: _) => apply singleton_subset, inList3
+                                      | H: subset (fv (open ?k1 (open ?k2 ?t (fvar ?n3 term_var)) (fvar ?n2 term_var))) (?n1::?n2::?n3::?A),
+                                           H1: ~ ?n3 ∈ (fv ?t),
+                                               H2: ~ ?n2 ∈ (fv ?t),
+                                                   H3: ~ ?n1 ∈ (fv ?t)
+                                        |- subset (pfv ?t term_var) ?A  => apply (subset_open_open k1 k2 t n3 n2 n1 A H H1 H2 H3)
                                       end || rewrite pfv_fvar || rewrite pfv_fvar2 || simpl || unfold fv || rewrite_deriv.
 
 Hint Rewrite isValueCorrect: deriv.
@@ -496,11 +486,11 @@ Proof.
       | H: _
         |- [[?Θ; ?Γ ⊨ (tmatch ?tn ?t0 ?ts) : ?T]] => apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3)
       | H1: [[?Θ; (?x1, T_equiv _ ttrue)::?Γ ⊨ _ : _ ]],
-        H2: [[?Θ; (?x2, T_equiv _ tfalse)::?Γ ⊨ _ : _ ]]
+            H2: [[?Θ; (?x2, T_equiv _ tfalse)::?Γ ⊨ _ : _ ]]
         |- [[?Θ; ?Γ ⊨ (ite ?t1 ?t2 ?t3) : (T_ite _ ?T1 ?T2)]] =>
         (apply (annotated_reducible_T_ite Θ Γ t1 t2 t3 T1 T2 x1 x2))
       | H1: [[?Θ; (?x1, T_equiv _ ttrue)::?Γ ⊨ _ : _ ]],
-        H2: [[?Θ; (?x2, T_equiv _ tfalse)::?Γ ⊨ _ : _ ]]
+            H2: [[?Θ; (?x2, T_equiv _ tfalse)::?Γ ⊨ _ : _ ]]
         |- [[?Θ; ?Γ ⊨ (ite ?t1 ?t2 ?t3) : ?T ]] => apply (annotated_reducible_ite Θ Γ t1 t2 t3 T x1 x2)
       | H: [[?Θ; ?Γ ⊨ ?t : (T_prod ?A ?B)]]
         |- [[?Θ; ?Γ ⊨ (pi1 ?t) : ?A]] => apply (annotated_reducible_pi1 Θ Γ t A B)
@@ -521,7 +511,7 @@ Proof.
       | H: ?x <> ?p
         |- [[?Θ; ?Γ ⊨ (tlet ?t1 ?A ?t2) : _]] => apply (annotated_reducible_let Θ Γ t1 t2 x p A)
       | H: [[ ?Θ; (?p,_)::(?y,_)::(?n,_)::?Γ ⊨ _ : _ ]] |-  [[?Θ; ?Γ ⊨ (tfix ?t1 ?t2) : (T_forall T_nat ?t1)]] => apply (annotated_reducible_fix_strong_induction Θ Γ t2 t1 n y p)
-                                                                                                                    | H: [[ ?Θ; ?Γ ⊨ ?t1 : (T_forall ?U ?V)]], H2 : [[_; _ ⊨ ?t2 : ?U]] |- _ => apply (annotated_reducible_forall_inst Θ Γ t1 t2 U V)
+      | H: [[ ?Θ; ?Γ ⊨ ?t1 : (T_forall ?U ?V)]], H2 : [[_; _ ⊨ ?t2 : ?U]] |- _ => apply (annotated_reducible_forall_inst Θ Γ t1 t2 U V)
       |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]], H2: [[?Θ; ?Γ ⊨ ?t2 ≡ ?t3]] |- [[?Θ; ?Γ ⊨ ?t1 ≡ ?t3 ]] => apply (annotated_equivalent_trans Θ Γ t1 t2 t3 H H2)
       |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]] |- [[?Θ; ?Γ ⊨ ?t2 ≡ ?t1 ]] => apply (annotated_equivalent_sym Θ Γ t1 t2 H)
       |H: _ |- [[?Θ; ?Γ ⊨ ?t ≡ ?t ]] => apply (annotated_equivalent_refl Θ Γ t)

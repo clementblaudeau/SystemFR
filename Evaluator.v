@@ -194,7 +194,7 @@ Qed.
 (* Extraction *)
 Require Extraction.
 
-Extraction Language Ocaml.
+Extraction Language OCaml.
 Set Extraction AccessOpaque.
 
 

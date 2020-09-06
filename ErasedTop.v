@@ -32,3 +32,12 @@ Proof.
     repeat step || t_instantiate_sat3;
     eauto using reducible_top.
 Qed.
+
+Lemma open_reducible_top_value:
+  forall tvars gamma t,
+    (closed_value t) ->
+    [ tvars; gamma ⊨ t : T_top ].
+Proof.
+  unfold open_reducible, reducible, reduces_to.
+  repeat steps || simp_red || exists t || t_closer || rewrite substitute_nothing5 ; eauto with fv wf erased.
+Qed.

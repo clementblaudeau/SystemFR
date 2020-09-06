@@ -20,6 +20,7 @@ Require Export SystemFR.AnnotatedRefine.
 Require Export SystemFR.AnnotatedErr.
 Require Export SystemFR.AnnotatedQuant.
 Require Export SystemFR.DerivationHelpers.
+Require Export SystemFR.AnnotatedTop.
 Require Import Psatz.
 
 
@@ -44,6 +45,8 @@ Hint Resolve annotated_reducible_weaken: deriv.
 Hint Rewrite isNat_Correct : deriv.
 Hint Resolve annotated_reducible_unit: deriv.
 Hint Rewrite tree_eq_prop: deriv.
+Hint Resolve annotated_reducible_top: deriv.
+Hint Resolve annotated_reducible_top_value: deriv.
 
 (* Judgments *)
 Inductive TJ_name :=
@@ -66,7 +69,9 @@ Inductive TJ_name :=
 | J_error
 | J_refine
 | J_refine_unfold
-| J_forall_inst.
+| J_forall_inst
+| J_Top
+| J_Top_value.
 
 
 Inductive StJ_name :=

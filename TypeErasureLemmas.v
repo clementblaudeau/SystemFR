@@ -206,3 +206,12 @@ Proof.
   induction T1;
     repeat step || rewrite erase_term_topen in * || t_equality || rewrite topen_erase_term in *.
 Qed.
+
+Lemma erase_erased_annotated_term:
+  forall t,
+    is_erased_term t ->
+    is_annotated_term t ->
+    erase_term t = t.
+Proof.
+  induction t; steps.
+Qed.

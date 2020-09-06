@@ -268,7 +268,12 @@ Definition list_nat_eq_dec : forall (x y : list nat), {x = y} + {x <> y}.
 Proof.
   repeat decide equality.
 Qed.
-
+Definition list_nat_eq l1 l2 := if (list_nat_eq_dec l1 l2) then true else false.
+Definition list_nat_eq_prop : forall l1 l2, list_nat_eq l1 l2 = true <-> l1 = l2.
+Proof.
+  unfold list_nat_eq.
+  steps.
+Qed.
 
 Definition option_dec: forall X (x y : option X), decidable X -> {x = y} + {x <> y}.
   intros.
@@ -576,3 +581,16 @@ Proof.
   rewrite refinementUnfoldInContext_prop in *.
   repeat steps || list_utils || fv_open ; eauto with sets fv.
 Qed.
+
+
+
+Definition closed_valueb t := (wfb t 0) && (is_erased_termb t) && (isValue t) && (list_nat_eq (fv t) nil).
+
+Lemma closed_valueb_prop :
+  forall t, closed_valueb t = true <-> closed_value t.
+Proof.
+  unfold closed_valueb, closed_value, closed_term.
+  repeat steps || bools || rewrite isValueCorrect in * || rewrite wfb_prop in * || rewrite is_erased_termb_prop in * || rewrite list_nat_eq_prop in *.
+Qed.
+
+Hint Rewrite closed_valueb_prop: deriv.

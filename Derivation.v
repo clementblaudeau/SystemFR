@@ -233,6 +233,12 @@ Fixpoint is_valid(dv: derivation) : bool :=
     && (tree_eq t T)
     && ((fv T) ?⊂ (support Γ))
 
+  (* Top *)
+  | N (TJ J_Top Θ Γ t T_top)
+      (( N ((TJ I1 _ _ _ T) as j1) _ as d1) :: nil) =>
+    (j1 ?= (TJ I1 Θ Γ t T)) && (is_valid d1)
+
+
   (* EQUIVALENCE JUDGMENTS *)
   (* Symetric *)
   | N (EJ E_sym Θ Γ t1 t2)

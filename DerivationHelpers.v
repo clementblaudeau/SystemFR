@@ -76,6 +76,7 @@ Fixpoint is_annotated_termb t :=
   | tmatch t' t0 ts => is_annotated_termb t' && is_annotated_termb t0 && is_annotated_termb ts
 
   | tfix T t' => is_annotated_typeb T && is_annotated_termb t'
+  | notype_tfix  t => is_annotated_termb t
 
   | notype_tlet t1 t2 => is_annotated_termb t1 && is_annotated_termb t2
   | tlet t1 A t2 => is_annotated_termb t1 && is_annotated_typeb A && is_annotated_termb t2

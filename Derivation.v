@@ -64,8 +64,6 @@ Fixpoint is_valid(dv: derivation) : bool :=
         && (x1 ?∉ (fv T)) && (x2 ?∉ (fv T))
       )
 
-
-
   (* Pairs *)
   (* PP *)
   | N (TJ J_PP Θ Γ (pp t1 t2) (T_prod A B))
@@ -238,6 +236,9 @@ Fixpoint is_valid(dv: derivation) : bool :=
       (( N ((TJ I1 _ _ _ T) as j1) _ as d1) :: nil) =>
     (j1 ?= (TJ I1 Θ Γ t T)) && (is_valid d1)
 
+  | N (TJ J_Top_value Θ Γ t T_top) nil =>
+    (closed_valueb t) && (is_annotated_termb t)
+
 
   (* EQUIVALENCE JUDGMENTS *)
   (* Symetric *)
@@ -315,15 +316,16 @@ Ltac rewrite_deriv :=
 
 Ltac destruct_clear t H := destruct t; try apply (ex_falso_quolibet _ H).
 
+Hint Unfold closed_value: deriv.
 
 Lemma is_valid_wf_aux: forall dv, is_valid dv = true -> wf (J_term1 (root dv)) 0 /\ wf (J_term2 (root dv)) 0.
 Proof.
   induction dv using derivation_ind.
-  intros. unfold root, J_term1, J_term2. unfold forallP in X.
+  intros. unfold root, J_term1, J_term2, closed_value. unfold forallP in X.
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
-  all: repeat subst || light_bool || match goal with | H: wf (_ _) _ |- _ => simpl in H end || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens ; simpl.
-  all: repeat split; eauto with wf.
+  all: repeat subst || light_bool || match goal with | H: wf (_ _) _ |- _ => simpl in H end || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens || unfold closed_value, closed_term in * ; simpl.
+  all: repeat split; eauto with wf deriv.
 Qed.
 
 
@@ -406,7 +408,7 @@ Proof.
               | H: refinementUnfoldInContext ?Γ ?Γ0 = Some (?x, ?p, ?ty, ?P) |- _ =>
                 apply refinementUnfoldInContext_support2 in H
               end
-       || invert_constructor_equalities || apply support_open2|| inst_list_prop || modus_ponens || simpl || split;
+       || invert_constructor_equalities || apply support_open2|| inst_list_prop || modus_ponens || simpl || split || rewrite_any || unfold closed_value, closed_term in * ;
     eauto 3 using singleton_subset, inList1, inList2, inList3 with sets.
 Qed.
 

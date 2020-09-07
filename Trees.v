@@ -144,6 +144,7 @@ Fixpoint is_annotated_term t :=
   | tmatch t' t0 ts => is_annotated_term t' /\ is_annotated_term t0 /\ is_annotated_term ts
 
   | tfix T t' => is_annotated_type T /\ is_annotated_term t'
+  | notype_tfix t => is_annotated_term t
 
   | notype_tlet t1 t2 => is_annotated_term t1 /\ is_annotated_term t2
   | tlet t1 A t2 => is_annotated_term t1 /\ is_annotated_type A /\ is_annotated_term t2

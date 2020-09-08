@@ -88,18 +88,25 @@ Inductive EJ_name :=
 | E_SMT
 .
 
+
+Inductive compactContext :=
+| Same
+| New : context -> compactContext
+| Append : list (nat * tree) -> compactContext
+.
+
 Inductive Judgment:=
-| TJ(name: TJ_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment
-| StJ(name: StJ_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment
-| EJ(name: EJ_name)(Θ: (list nat))(Γ: context)(t: tree)(T: tree): Judgment
+| TJ(name: TJ_name)(Θ: (list nat))(Γ: compactContext)(t: tree)(T: tree): Judgment
+| StJ(name: StJ_name)(Θ: (list nat))(Γ: compactContext)(t: tree)(T: tree): Judgment
+| EJ(name: EJ_name)(Θ: (list nat))(Γ: compactContext)(t: tree)(T: tree): Judgment
 .
 
 
-Definition is_true (j: Judgment) : Prop :=
+Definition is_true (j: Judgment) (Γ: context) : Prop :=
   match j with
-  | TJ _ Θ Γ t T => [[ Θ; Γ ⊨ t : T ]]
-  | StJ _ Θ Γ t T => [[ Θ; Γ ⊨ t <: T ]]
-  | EJ _ Θ Γ t t' => [[ Θ; Γ ⊨ t ≡ t' ]]
+  | TJ  _ Θ _ t T => [[ Θ; Γ ⊨ t  : T ]]
+  | StJ _ Θ _ t T => [[ Θ; Γ ⊨ t <: T ]]
+  | EJ  _ Θ _ t T => [[ Θ; Γ ⊨ t  ≡ T ]]
   end.
 
 
@@ -111,10 +118,13 @@ Definition J_term2 dv :=
   match dv with
    | TJ _ _ _ _ t | StJ _ _ _ _ t | EJ _ _ _ _ t => t
   end.
+(*
+
 Definition J_context dv :=
   match dv with
   | TJ _ _ Γ _ _ | StJ _ _ Γ _ _ | EJ _ _ Γ _ _ => Γ
   end.
+*)
 
 (* Derivation trees *)
 Inductive NodeTree (T:Type) :=
@@ -139,13 +149,16 @@ Lemma TJ_term2_root : forall n Θ Γ t T c, J_term2 (root (N (TJ n Θ Γ t T) c)
 Lemma EJ_term2_root : forall n Θ Γ t T c, J_term2 (root (N (EJ n Θ Γ t T) c)) = T. Proof. steps. Qed.
 Lemma StJ_term2_root : forall n Θ Γ t T c, J_term2 (root (N (StJ n Θ Γ t T) c)) = T. Proof. steps. Qed.
 
+(*
 Lemma TJ_context_root : forall n Θ Γ t T c, J_context (root (N (TJ n Θ Γ t T) c)) = Γ. Proof. steps. Qed.
 Lemma EJ_context_root : forall n Θ Γ t T c, J_context (root (N (EJ n Θ Γ t T) c)) = Γ. Proof. steps. Qed.
 Lemma StJ_context_root : forall n Θ Γ t T c, J_context (root (N (StJ n Θ Γ t T) c)) = Γ. Proof. steps. Qed.
+ *)
 
 Hint Rewrite TJ_term1_root EJ_term1_root StJ_term1_root
-     TJ_term2_root EJ_term2_root StJ_term2_root
-     TJ_context_root EJ_context_root StJ_context_root : deriv.
+     TJ_term2_root EJ_term2_root StJ_term2_root : deriv.
+                                                    (*
+     TJ_context_root EJ_context_root StJ_context_root : deriv. *)
 
 Definition derivation := NodeTree Judgment.
 
@@ -186,22 +199,35 @@ Qed.
 
 
 (* Decidable equality for Judgments *)
-Definition TJ_name_eq_dec: forall (x y: TJ_name), {x = y} + {x <> y}.
+Lemma TJ_name_eq_dec: forall (x y: TJ_name), {x = y} + {x <> y}.
 Proof.
   decide equality; apply tree_eq_dec.
 Defined.
-Definition StJ_name_eq_dec: forall (x y: StJ_name), {x = y} + {x <> y}.
+Lemma StJ_name_eq_dec: forall (x y: StJ_name), {x = y} + {x <> y}.
 Proof.
   intros.
   destruct x, y.
   decide equality.
 Defined.
-Definition EJ_name_eq_dec: forall (x y: EJ_name), {x = y} + {x <> y}.
+Lemma EJ_name_eq_dec: forall (x y: EJ_name), {x = y} + {x <> y}.
 Proof.
   intros.
   destruct x, y;
   decide equality; try apply tree_eq_dec.
 Defined.
+
+Lemma compactContext_eq_dec : forall (x y: compactContext), {x = y} + {x <> y}.
+Proof.
+  intros.
+  destruct x, y;
+    repeat apply context_eq_dec || apply tree_eq_dec || steps || (right; discriminate) || (left; reflexivity) || decide equality || pose proof (context_eq_dec c c0) as [H1| H2].
+  + right.
+    intros.
+    invert_constructor_equalities; eauto.
+  + pose proof (context_eq_dec l l0) as [Hb | Hb]; steps.
+    all: right; intros; invert_constructor_equalities; eauto.
+Qed.
+
 
 Definition Judgment_eq_dec : forall (x y : Judgment), {x = y} + {x <> y}.
 Proof.
@@ -209,7 +235,7 @@ Proof.
   induction x; destruct y;
   decide equality;
     try apply tree_eq_dec ||
-        apply context_eq_dec ||
+        apply compactContext_eq_dec ||
         apply TJ_name_eq_dec ||
         apply StJ_name_eq_dec ||
         apply EJ_name_eq_dec ||

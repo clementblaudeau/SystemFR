@@ -159,6 +159,23 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     && (is_annotated_termb t1) && (is_annotated_termb t2)
     && (tree_eq T (open 0 B t1))
 
+  (* notype_tlet *)
+  | N (TJ (J_Let B) Θ _ (notype_tlet t1 t2) T)
+      ((N ((TJ I1 _ Same _ A) as j1) _ as d1)
+         :: (N ((TJ I2 _ (Append [(p, _);(x,_)]) _ _) as j2) _ as d2) :: nil) =>
+    (j1 ?= (TJ I1 Θ Same t1 A)) && (is_valid d1 Γ)
+    && (j2 ?= (TJ I2 Θ (Append [(p, T_equiv (fvar x term_var) t1);(x,A)]) (open 0 t2 (fvar x term_var)) (open 0 B (fvar x term_var)))) && (is_valid d2 ((p, T_equiv (fvar x term_var) t1)::(x,A)::Γ) )
+    && (x ?∉ (fv_context Γ)) && (p ?∉ (fv_context Γ))
+    && (x ?<> p)
+    && (x ?∉ (fv t2)) && (p ?∉ (fv t2))
+    && (x ?∉ (fv B)) && (p ?∉ (fv B))
+    && (x ?∉ (fv A)) && (p ?∉ (fv A))
+    && (x ?∉ (fv t1)) && (p ?∉ (fv t1))
+    && (x ?∉ Θ) && (p ?∉ Θ)
+    && (is_annotated_typeb B)
+    && (is_annotated_termb t1) && (is_annotated_termb t2)
+    && (tree_eq T (open 0 B t1))
+
   (* Var *)
   | N (TJ J_Var _ _ (fvar x term_var) T) nil =>
     (option_tree_dec_eq (lookup PeanoNat.Nat.eq_dec Γ x) (Some T))
@@ -516,10 +533,10 @@ Proof.
         |- [[?Θ; ?Γ ⊨ (sum_match ?t1 ?t2 ?t3) : ?T]] => eapply (annotated_reducible_sum_match Θ Γ t1 t2 t3 A B _ y p)
       | H: _
         |- [[?Θ; ?Γ ⊨ (lambda ?T ?t) : _]] => eapply (annotated_reducible_lambda)
-      | H: _
-        |- [[?Θ; ?Γ ⊨ (tlet ?T ?t) : _]] => eapply (annotated_reducible_let Θ Γ)
       | H: ?x <> ?p
         |- [[?Θ; ?Γ ⊨ (tlet ?t1 ?A ?t2) : _]] => apply (annotated_reducible_let Θ Γ t1 t2 x p A)
+      | H: ?x <> ?p, H1: [[?Θ; ?Γ ⊨ ?t1 : ?A]]
+        |- [[?Θ; ?Γ ⊨ (notype_tlet ?t1 ?t2) : _]] => apply (annotated_reducible_notype_tlet Θ Γ t1 t2 x p A)
       | H: [[ ?Θ; (?p,_)::(?y,_)::(?n,_)::?Γ ⊨ _ : _ ]] |-  [[?Θ; ?Γ ⊨ (tfix ?t1 ?t2) : (T_forall T_nat ?t1)]] => apply (annotated_reducible_fix_strong_induction Θ Γ t2 t1 n y p)
       | H: [[ ?Θ; ?Γ ⊨ ?t1 : (T_forall ?U ?V)]], H2 : [[_; _ ⊨ ?t2 : ?U]] |- _ => apply (annotated_reducible_forall_inst Θ Γ t1 t2 U V)
       |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]], H2: [[?Θ; ?Γ ⊨ ?t2 ≡ ?t3]] |- [[?Θ; ?Γ ⊨ ?t1 ≡ ?t3 ]] => apply (annotated_equivalent_trans Θ Γ t1 t2 t3 H H2)

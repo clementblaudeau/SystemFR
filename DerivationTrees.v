@@ -219,15 +219,12 @@ Defined.
 Lemma compactContext_eq_dec : forall (x y: compactContext), {x = y} + {x <> y}.
 Proof.
   intros.
-  destruct x, y;
-    repeat apply context_eq_dec || apply tree_eq_dec || steps || (right; discriminate) || (left; reflexivity) || decide equality || pose proof (context_eq_dec c c0) as [H1| H2].
-  + right.
-    intros.
-    invert_constructor_equalities; eauto.
-  + pose proof (context_eq_dec l l0) as [Hb | Hb]; steps.
-    all: right; intros; invert_constructor_equalities; eauto.
-Qed.
-
+  destruct x as [| c | c], y as [| c0 | c0].
+  all: try pose proof (context_eq_dec c c0) as [Hb | Hb]; subst.
+  all: try solve [left; reflexivity].
+  all: try solve [right; discriminate].
+  all: right; intros H; invert_constructor_equalities; apply (Hb H1).
+Defined.
 
 Definition Judgment_eq_dec : forall (x y : Judgment), {x = y} + {x <> y}.
 Proof.

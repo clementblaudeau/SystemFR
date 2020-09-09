@@ -388,25 +388,6 @@ Qed.
 Hint Resolve in_subset_not: sets.
 Hint Unfold fv: deriv.
 
-Lemma subset_open_open: forall k1 k2 t n3 n2 n1 A,
-    subset (fv (open k1 (open k2 t (fvar n3 term_var)) (fvar n2 term_var))) (n1::n2::n3::A) ->
-    ~ n3 ∈ (fv t) ->
-    ~ n2 ∈ (fv t) ->
-    ~ n1 ∈ (fv t) ->
-    subset (fv t) A.
-  intros.
-  apply (subset_add5 _ n1 n2 n3 _ _ H2 H1 H0).
-  pose proof (proj2
-                (iff_and (singleton_subset (n1::n2::n3::A) n2))
-                (inList2 n2 n1 (n3::A))) as H_temp1.
-  pose proof (proj2
-                (iff_and (singleton_subset (n1::n2::n3::A) n3))
-                (inList3 n3 n2 n1 (A))) as H_temp2.
-  rewrite <- (pfv_fvar n2 term_var) in H_temp1.
-  rewrite <- (pfv_fvar n3 term_var) in H_temp2.
-  pose proof (support_open (open k2 t (fvar n3 term_var)) (fvar n2 term_var) term_var k1 _ H H_temp1) as H_temp3.
-  apply (support_open t (fvar n3 term_var) term_var k2 (n1::n2::n3::A) H_temp3 H_temp2).
-Qed.
 
 Hint Rewrite fv_context_append: deriv.
 
@@ -497,6 +478,26 @@ Ltac modus_ponens :=
   match goal with
   | H1: ?A , H2: ?A -> _ |- _ => pose proof (H2 H1) ; clear H2
   end.
+
+Lemma subset_open_open: forall k1 k2 t n3 n2 n1 A,
+    subset (fv (open k1 (open k2 t (fvar n3 term_var)) (fvar n2 term_var))) (n1::n2::n3::A) ->
+    ~ n3 ∈ (fv t) ->
+    ~ n2 ∈ (fv t) ->
+    ~ n1 ∈ (fv t) ->
+    subset (fv t) A.
+  intros.
+  apply (subset_add5 _ n1 n2 n3 _ _ H2 H1 H0).
+  pose proof (proj2
+                (iff_and (singleton_subset (n1::n2::n3::A) n2))
+                (inList2 n2 n1 (n3::A))) as H_temp1.
+  pose proof (proj2
+                (iff_and (singleton_subset (n1::n2::n3::A) n3))
+                (inList3 n3 n2 n1 (A))) as H_temp2.
+  rewrite <- (pfv_fvar n2 term_var) in H_temp1.
+  rewrite <- (pfv_fvar n3 term_var) in H_temp2.
+  pose proof (support_open (open k2 t (fvar n3 term_var)) (fvar n2 term_var) term_var k1 _ H H_temp1) as H_temp3.
+  apply (support_open t (fvar n3 term_var) term_var k2 (n1::n2::n3::A) H_temp3 H_temp2).
+Qed.
 
 
 Ltac light_bool :=

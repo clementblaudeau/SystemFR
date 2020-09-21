@@ -627,6 +627,19 @@ Proof.
 Qed.
 
 
+Lemma refinementUnfoldInContext_support3 :
+  forall A Γ1 Γ2 x p ty P,
+    refinementUnfoldInContext Γ1 Γ2 = Some (x,p,ty,P) ->
+    subset A (support Γ2) ->
+    ~ p ∈ A ->
+    subset A (support Γ1).
+Proof.
+  intros.
+  rewrite refinementUnfoldInContext_prop in *.
+  repeat steps || list_utils || fv_open ; eauto with sets fv.
+Qed.
+
+
 
 Definition closed_valueb t := (wfb t 0) && (is_erased_termb t) && (isValue t) && (list_nat_eq (fv t) nil).
 

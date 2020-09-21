@@ -77,11 +77,9 @@ Proof.
                            H3: ~ ?n1 ∈ (fv ?t)
                 |- subset (pfv ?t term_var) ?A  => apply (subset_open_open k1 k2 t n3 n2 n1 A H H1 H2 H3)
               | H: subset( fv (_ _ _)) _ |- _ => cbn in H
-              | H: refinementUnfoldInContext ?Γ ?Γ0 = Some (?x, ?p, ?ty, ?P) |- _ =>
-                apply refinementUnfoldInContext_support2 in H
               end
        || invert_constructor_equalities || apply support_open2 || simpl || split || rewrite_any || unfold closed_value, closed_term in * ;
-    eauto 3 using singleton_subset, inList1, inList2, inList3 with sets.
+    eauto 3 using singleton_subset, inList1, inList2, inList3, refinementUnfoldInContext_support3 with sets.
 Qed.
 
 
@@ -225,7 +223,7 @@ Proof.
           apply annotated_reducible_unfold_refine; eauto; rewrite support_append in *;
             rewrite fv_context_append in *;
             list_utils; steps
-      | H: refinementUnfoldInContext ?Γ0 ?Γ = Some (?x, ?p, ?ty, ?P) |- [[ ?Θ ; ?Γ ⊨ ?t ≡ ?T]] =>
+      | H: refinementUnfoldInContext ?Γ ?Γ0 = Some (?x, ?p, ?ty, ?P) |- [[ ?Θ ; ?Γ ⊨ ?t ≡ ?T]] =>
         let Γ := fresh Γ in
         let Γ' := fresh Γ' in
         let fH := fresh H in
@@ -234,6 +232,12 @@ Proof.
             rewrite fv_context_append in *;
             list_utils; steps
       end; soundness_finish; eauto with deriv.
+
+
+  rewrite refinementUnfoldInContext_prop in matched5.
+  destruct matched5 as [Γ1 [Γ2 [matched5 fH] ] ]. subst.
+  pose proof (annotated_reducible_refine).
+  pose proof (annotated_reducible_unfold_refine Θ Γ1 Γ2 n1 n2 t2 t1 t T H2 H11 H10 H9).
 
   assert (is_valid (N (EJ E_SMT Θ Same t T) c) Γ = true).
   cbn; repeat bools || steps || autorewrite with deriv; eauto.

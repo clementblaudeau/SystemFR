@@ -1,5 +1,7 @@
 # System FR [![Build Status][larabot-img]][larabot-ref]
 
+![System FR's logo](logo/small.png?raw=true)
+
 ### Description
 
 This project aims to formalize in Coq part of the [Stainless project](https://github.com/epfl-lara/stainless). It describes a call-by-value lambda-calculus and defines a rich type system (based on computations) that describes behaviors of lambda-calculus terms. Supported types include: System F polymorphism, recursive types, infinite intersections, refinement and dependent types, equality types.
@@ -8,8 +10,8 @@ This project aims to formalize in Coq part of the [Stainless project](https://gi
 
 The proofs require Coq and Coq-Equations, which can be installed using `opam` with the `coq` and `coq-equations` packages. Some instructions are available [here](https://github.com/coq/coq/wiki/Installation-of-Coq-on-Linux) and [there](https://github.com/mattam82/Coq-Equations).
 
-* Coq 8.11.0
-* Coq-Equations 1.2.1+8.11
+* Coq 8.12.0
+* Coq-Equations 1.2.3+8.12
 
 ### Compiling the Proofs
 

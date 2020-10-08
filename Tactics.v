@@ -1,14 +1,12 @@
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
-Require Import Omega.
 Require Import Psatz.
 
 Open Scope string.
 
-Hint Extern 50 => omega: omega.
 Hint Extern 50 => lia: lia.
 Hint Extern 50 => cbn: cbn.
-Hint Extern 50 => cbn; intuition auto: cbn_intuition.
+Hint Extern 50 => intuition auto: intuition.
 
 Ltac destruct_and :=
   match goal with
@@ -110,7 +108,7 @@ Ltac step_gen := match goal with
     destruct H as [ x' ]
   | [ p: ?A*?B |- _ ] => destruct p
   | [ H: (_,_) = (_,_) |- _ ] => inversion H; clear H
-  | [ H: context[Nat.eq_dec ?U ?V] |- _ ] => destruct (Nat.eq_dec U V)
+  | [ H: context[PeanoNat.Nat.eq_dec ?U ?V] |- _ ] => destruct (PeanoNat.Nat.eq_dec U V)
   | H: _ |- _ => injection H; clear H
   | |- NoDup _ => constructor
   | H: forall a, _ -> _ |- _ => pose proof (H _ eq_refl); clear H
@@ -320,21 +318,15 @@ match goal with
 | H: ?F _ _ _ _ _ _ = ?F _ _ _ _ _ _ |- _ => is_constructor F; inversion H; clear H
 end.
 
-Ltac custom_light :=
-  (intros) ||
-  (subst).
-
 Ltac destruct_match :=
-match goal with
-| [ |- context[match ?t with _ => _ end]] =>
-let matched := fresh "matched" in
-destruct t eqn:matched
-| [ H: context[match ?t with _ => _ end] |- _ ] =>
-let matched := fresh "matched" in
-destruct t eqn:matched
+  match goal with
+  | [ |- context[match ?t with _ => _ end]] =>
+    let matched := fresh "matched" in
+    destruct t eqn:matched
+  | [ H: context[match ?t with _ => _ end] |- _ ] =>
+    let matched := fresh "matched" in
+    destruct t eqn:matched
 end.
-
-
 
 Ltac instantiate_eq_refl :=
 match goal with

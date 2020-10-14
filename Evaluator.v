@@ -15,7 +15,17 @@ Fixpoint is_nat (t : tree) : bool :=
     | zero => true
     | succ t1 => (is_nat t1)
     | _ => false
-end.
+  end.
+
+Lemma is_nat_is_nat_value :
+  forall t, is_nat t = true <-> is_nat_value t.
+Proof.
+  split.
+  + induction t; repeat steps || apply INVSucc.
+  + intros. is_nat_value_buildable. steps.
+    clear H. clear H0.
+    induction n; steps.
+Qed.
 
 Fixpoint is_value (t: tree) : bool :=
   match t with

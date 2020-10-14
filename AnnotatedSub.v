@@ -36,20 +36,20 @@ Qed.
 Hint Resolve drop_refinement_pfv_subset: sets.
 
 Lemma annotated_subtype_drop :
-  forall tvars gamma T1,
-    [[tvars; gamma ⊨ T1 <: drop_refinement T1]].
+  forall Θ Γ T1,
+    [[ Θ ; Γ ⊨ T1 <: drop_refinement T1]].
 Proof.
   intros.
-  induction T1; steps.
-  eapply subtype_trans; eauto.
+  induction T1; try solve [steps].
+  eapply subtype_trans ; eauto.
   eapply annotated_subtype_refine2.
   steps.
 Qed.
 
 Lemma annotated_reducible_drop:
-  forall tvars gamma t T,
-    [[ tvars; gamma ⊨ t : T ]] ->
-    [[ tvars; gamma ⊨ t : (drop_refinement T) ]].
+  forall Θ Γ t T,
+    [[ Θ ; Γ ⊨ t : T ]] ->
+    [[ Θ ; Γ ⊨ t : (drop_refinement T) ]].
 Proof.
   intros.
   eapply annotated_reducible_sub; eauto; steps; eauto using annotated_subtype_drop .

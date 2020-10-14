@@ -38,6 +38,6 @@ Lemma open_reducible_top_value:
     (closed_value t) ->
     [ tvars; gamma ⊨ t : T_top ].
 Proof.
-  unfold open_reducible, reducible, reduces_to.
+  unfold open_reducible, reduces_to.
   repeat steps || simp_red || exists t || t_closer || rewrite substitute_nothing5 ; eauto with fv wf erased.
 Qed.

@@ -94,6 +94,38 @@ Proof.
 Qed.
 
 
+Lemma open_reducible_refine_fold:
+    forall Θ Γ Γ' x p ty P t T,
+    ~(p ∈ fv t) ->
+    ~(p ∈ fv T) ->
+    ~(p ∈ fv P) ->
+    ~(p ∈ fv ty) ->
+    ~(p ∈ fv_context Γ') ->
+    ~(p ∈ fv_context Γ) ->
+    ~(x = p) ->
+    ~(x ∈ fv ty) ->
+    ~(x ∈ fv P) ->
+    (wf P 1) ->
+    subset (fv ty) (support Γ') ->
+    subset (fv P) (support Γ') ->
+    (is_erased_term P) ->
+    [ Θ; Γ++((p, T_equiv (open 0 P (fvar x term_var)) ttrue)::(x, ty)::Γ')  ⊨ t : T] ->
+    [ Θ; Γ++((x, T_refine ty P)::Γ') ⊨ t : T].
+Proof.
+  intros.
+  eapply_anywhere satisfies_transform ; eauto;
+    repeat steps || satisfies_cut || step_inversion satisfies || rewrite_anywhere reducible_values_equation_10.
+  exists (l1++(p,uu)::(x,t0)::lterms); steps; eauto; try solve [rewrite substitute_skip; steps].
+  eapply satisfies_insert;
+    repeat steps || list_utils || sets || fv_open ; eauto with wf fv.
+  + apply_anywhere satisfies_cut;
+      repeat steps || step_inversion satisfies || rewrite reducible_values_equation_16 || rewrite substitute_open3 ;
+      eauto using equivalent_star with wf fv erased.
+  + repeat steps || list_utils || fv_open || eauto using x_not_in_support, NoDup_append || apply_anywhere satisfies_nodup || rewrite_anywhere support_append || apply NoDup_append with (x := z) in H13.
+  + eapply satisfies_weaken with (T := (T_refine ty P)) ; eauto ;
+      repeat steps || list_utils ||  rewrite reducible_values_equation_10 in * || sets || apply_anywhere satisfies_nodup.
+Qed.
+
 
 Lemma subtype_refine:
   forall ρ (Γ : context) A B p q (x : nat) t l,

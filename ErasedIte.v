@@ -9,7 +9,7 @@ Require Import Coq.Lists.List.
 Opaque reducible_values.
 
 Lemma open_reducible_T_ite:
-  forall Θ Γ T1 T2 b t1 t2 x,
+  forall Θ Γ T1 T2 b t1 t2 x1 x2,
     wf t1 0 ->
     wf t2 0 ->
     wf T1 0 ->
@@ -23,19 +23,25 @@ Lemma open_reducible_T_ite:
     subset (fv t2) (support Γ) ->
     subset (fv T1) (support Γ) ->
     subset (fv T2) (support Γ) ->
-    ~(x ∈ fv b) ->
-    ~(x ∈ fv t1) ->
-    ~(x ∈ fv t2) ->
-    ~(x ∈ fv T1) ->
-    ~(x ∈ fv T2) ->
-    ~(x ∈ fv_context Γ) ->
-    ~(x ∈ Θ) ->
+
+    ~(x1 ∈ fv b) ->
+    ~(x1 ∈ fv t1) ->
+    ~(x1 ∈ fv T1) ->
+    ~(x1 ∈ fv_context Γ) ->
+    ~(x1 ∈ Θ) ->
+
+    ~(x2 ∈ fv b) ->
+    ~(x2 ∈ fv T2) ->
+    ~(x2 ∈ fv t2) ->
+    ~(x2 ∈ fv_context Γ) ->
+    ~(x2 ∈ Θ) ->
+
     is_erased_term b ->
     is_erased_term t1 ->
     is_erased_term t2 ->
     [ Θ; Γ ⊨ b : T_bool ] ->
-    [ Θ; (x, T_equiv b ttrue) :: Γ ⊨ t1 : T1 ] ->
-    [ Θ; (x, T_equiv b tfalse) :: Γ ⊨ t2 : T2 ] ->
+    [ Θ; (x1, T_equiv b ttrue) :: Γ ⊨ t1 : T1 ] ->
+    [ Θ; (x2, T_equiv b tfalse) :: Γ ⊨ t2 : T2 ] ->
     [ Θ; Γ ⊨ ite b t1 t2 : T_ite b T1 T2 ].
 Proof.
   unfold open_reducible; repeat step || t_instantiate_sat3.
@@ -52,7 +58,7 @@ Proof.
     eapply backstep_reducible; eauto with smallstep; repeat step || list_utils;
       eauto with fv wf erased.
 
-    unshelve epose proof (H23 ρ ((x, uu) :: lterms) _ _);
+    unshelve epose proof (H26 ρ ((x1, uu) :: lterms) _ _);
       repeat step || list_utils || apply SatCons || simp_red || t_substitutions;
       equivalent_star.
 
@@ -70,7 +76,7 @@ Proof.
     eapply backstep_reducible; eauto with smallstep; repeat step || list_utils;
       eauto with fv wf erased.
 
-    unshelve epose proof (H24 ρ ((x, uu) :: lterms) _ _);
+    unshelve epose proof (H27 ρ ((x2, uu) :: lterms) _ _);
       repeat step || list_utils || apply SatCons || simp_red || t_substitutions;
       equivalent_star.
 Qed.

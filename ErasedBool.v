@@ -70,21 +70,25 @@ Proof.
 Qed.
 
 Lemma open_reducible_ite:
-  forall Θ Γ T b t1 t2 x,
+  forall Θ Γ T b t1 t2 x1 x2,
     wf t1 0 ->
     wf t2 0 ->
     subset (fv t1) (support Γ) ->
     subset (fv t2) (support Γ) ->
-    ~(x ∈ fv b) ->
-    ~(x ∈ fv T) ->
-    ~(x ∈ fv_context Γ) ->
-    ~(x ∈ Θ) ->
+    ~(x1 ∈ fv b) ->
+    ~(x1 ∈ fv T) ->
+    ~(x1 ∈ fv_context Γ) ->
+    ~(x1 ∈ Θ) ->
+    ~(x2 ∈ fv b) ->
+    ~(x2 ∈ fv T) ->
+    ~(x2 ∈ fv_context Γ) ->
+    ~(x2 ∈ Θ) ->
     is_erased_term b ->
     is_erased_term t1 ->
     is_erased_term t2 ->
     [ Θ; Γ ⊨ b : T_bool ] ->
-    [ Θ; (x, T_equiv b ttrue) :: Γ ⊨ t1 : T ] ->
-    [ Θ; (x, T_equiv b tfalse) :: Γ ⊨ t2 : T ] ->
+    [ Θ; (x1, T_equiv b ttrue) :: Γ ⊨ t1 : T ] ->
+    [ Θ; (x2, T_equiv b tfalse) :: Γ ⊨ t2 : T ] ->
     [ Θ; Γ ⊨ ite b t1 t2 : T ].
 Proof.
   intros; unfold open_reducible; steps.

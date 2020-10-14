@@ -20,18 +20,19 @@ Lemma annotated_reducible_nat_value:
 Proof.
   assert (forall t lterms, is_nat_value t -> erase_term t = t /\ substitute t lterms = t /\ closed_term t). {
     intros.
-    rewrite <- isNat_Correct in H.
-    induction t; repeat steps || bools || cbv.
+    pose proof (is_nat_value_buildable _ H) as [n Hn]; subst. clear H.
+    induction n; repeat steps || cbv.
   }
-  unfold annotated_reducible, open_reducible, reducible, reduces_to, erase_type.
+  unfold open_reducible, reduces_to, erase_type.
   intros.
   pose proof (H t lterms H0) as [H_erased [H_subs H_closed ] ].
   split.
     + intuition.
     + exists t ; split.
       ++ unfold substitute, psubstitute.
-         rewrite (reducible_values_equation_4 theta t); eauto.
-      ++ rewrite H_erased, H_subs. apply Refl.
+         rewrite (reducible_values_equation_4 _ t); eauto.
+      ++ rewrite H_erased, H_subs. Unset Printing Notations.
+         apply Relation_Operators.rt1n_refl.
 Qed.
 
 

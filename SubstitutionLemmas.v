@@ -215,6 +215,15 @@ Proof.
   rewrite substitute_nothing2; steps.
 Qed.
 
+Lemma substitute_pfv_nil:
+  forall t lterms tag,
+    pfv (psubstitute t lterms tag) tag = nil ->
+    subset (pfv t tag) (support lterms).
+Proof.
+  induction t; intros x;
+    repeat steps || list_utils || sets ; eauto using lookupSomeSupport, empty_is_subset  ; try discriminate.
+Qed.
+
 Lemma same_support_substitute:
   forall Γ l tag,
     support (psubstitute_context Γ l tag) = support Γ.

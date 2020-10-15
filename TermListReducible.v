@@ -36,6 +36,24 @@ Proof.
   apply IHΓ1 with T; repeat step || list_utils; eauto.
 Qed.
 
+Lemma satisfies_weaken2:
+  forall ρ Γ1 Γ2 x T T' l,
+    (forall t l,
+      satisfies (reducible_values ρ) Γ2 l ->
+      [ ρ ⊨ t : substitute T l ]v ->
+      [ ρ ⊨ t : substitute T' l ]v) ->
+    subset (fv T') (fv T) ->
+    NoDup (support (Γ1 ++ (x, T) :: Γ2)) ->
+    satisfies (reducible_values ρ) (Γ1 ++ (x, T) :: Γ2) l ->
+    satisfies (reducible_values ρ) (Γ1 ++ (x, T') :: Γ2) l.
+Proof.
+  induction Γ1;
+    repeat step || list_utils || apply SatCons || step_inversion NoDup ||
+           step_inversion satisfies.
+
+  apply IHΓ1 with T; repeat step || list_utils; eauto.
+Qed.
+
 Lemma satisfies_transform:
   forall Γ Γ' Θ t T,
     [ Θ; Γ ⊨ t : T] ->

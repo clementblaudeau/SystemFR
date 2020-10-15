@@ -67,8 +67,6 @@ Lemma annotated_reducible_fold_refine:
     ~(x ∈ fv P) ->
     ~(x = p) ->
     (wf P 1) ->
-    subset (fv ty) (support Γ') ->
-    subset (fv P) (support Γ') ->
     (is_annotated_term P) ->
     [[ Θ; Γ++((p, T_equiv (open 0 P (fvar x term_var)) ttrue)::(x, ty)::Γ')  ⊨ t : T]] ->
     [[ Θ; Γ++((x, T_refine ty P)::Γ') ⊨ t : T]].

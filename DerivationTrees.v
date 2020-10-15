@@ -42,11 +42,11 @@ Hint Resolve annotated_reducible_sum_match: deriv.
 Hint Resolve annotated_reducible_let: deriv.
 Hint Resolve annotated_reducible_var: deriv.
 Hint Resolve annotated_reducible_weaken: deriv.
-Hint Rewrite isNat_Correct : deriv.
 Hint Resolve annotated_reducible_unit: deriv.
 Hint Rewrite tree_eq_prop: deriv.
 Hint Resolve annotated_reducible_top: deriv.
 Hint Resolve annotated_reducible_top_value: deriv.
+Hint Rewrite is_nat_is_nat_value: deriv.
 
 (* Judgments *)
 Inductive TJ_name :=
@@ -87,7 +87,6 @@ Inductive EJ_name :=
 | E_refine_unfold
 | E_SMT
 .
-
 
 Inductive compactContext :=
 | Same
@@ -216,14 +215,15 @@ Proof.
   decide equality; try apply tree_eq_dec.
 Defined.
 
-Lemma compactContext_eq_dec : forall (x y: compactContext), {x = y} + {x <> y}.
+Lemma compactContext_eq_dec :
+  forall (x y: compactContext), {x = y} + {x <> y}.
 Proof.
   intros.
-  destruct x as [| c | c], y as [| c0 | c0].
+  destruct x as [ | c | c] , y as [ | c0 | c0].
   all: try pose proof (context_eq_dec c c0) as [Hb | Hb]; subst.
-  all: try solve [left; reflexivity].
-  all: try solve [right; discriminate].
-  all: right; intros H; invert_constructor_equalities; apply (Hb H1).
+  all: try solve [steps].
+  all: try solve [apply Coq.Init.Specif.right ; discriminate].
+  all: apply Coq.Init.Specif.right; intros H; invert_constructor_equalities; apply (Hb H1).
 Defined.
 
 Definition Judgment_eq_dec : forall (x y : Judgment), {x = y} + {x <> y}.
@@ -237,8 +237,8 @@ Proof.
         apply StJ_name_eq_dec ||
         apply EJ_name_eq_dec ||
         apply (list_eqdec (nat_eqdec)) ||
-        (right; discriminate) ||
-        (left; reflexivity).
+        (apply Coq.Init.Specif.right; discriminate) ||
+        (apply Coq.Init.Specif.left; reflexivity).
 Defined.
 
 Definition Judgment_eq j1 j2 : bool := if (Judgment_eq_dec j1 j2) then true else false.

@@ -21,7 +21,7 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
 
   (* Naturals *)
   | N (TJ J_Nat _ _ zero T_nat) nil => true
-  | N (TJ J_Nat _ _ (succ t) T_nat) nil => (isNat t)
+  | N (TJ J_Nat _ _ (succ t) T_nat) nil => (is_nat t)
   | N (TJ J_Nat Θ _ (succ t) T_nat) (N (TJ I0 _ Same _ T_nat as j) _ as dv' ::nil) =>
     (j ?= (TJ I0 Θ Same t T_nat)) && (is_valid dv' Γ)
 
@@ -191,6 +191,7 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     match refinementUnfoldInContext Γ Γ' with
     | Some (x, p, ty, P) => (
         (p ?∉ fv t) && (p ?∉ fv T) && (p ?∉ fv P) && (p ?∉ fv ty) && (p ?∉ fv_context Γ)
+        && (x ?<> p) && (x ?∉ fv ty) && (x ?∉ fv P)
         && (is_annotated_termb P) && ((fv ty) ?⊂ (support Γ')) && ((fv P) ?⊂ (support Γ'))
         && (wfb P 1))
     | None => false
@@ -199,10 +200,13 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
   (* Add refinement *)
   | N (TJ J_refine Θ _ t (T_refine A b))
       (( N ((TJ I1 _ Same _ _) as j1) _ as d1)
-         :: ( N ((EJ I2 _ (Append [(p, _);(x, _)]) B ttrue) as j2) _ as d2):: nil) =>
+         :: ( N ((TJ I2 _ (Append [(x, _)]) _ T_bool) as j2) _ as d2)
+         :: ( N ((EJ I3 _ (Append [(p, _);(_, _)]) B ttrue) as j3) _ as d3):: nil) =>
     (j1 ?= (TJ I1 Θ Same t A)) && (is_valid d1 Γ)
-    && (j2 ?= (EJ I2 Θ (Append [(p, T_equiv (fvar x term_var) t);(x,A)]) (open 0 b (fvar x term_var)) ttrue))
-    && (is_valid d2 ((p, T_equiv (fvar x term_var) t)::(x,A)::Γ))
+    && (j2 ?= (TJ I2 Θ (Append [(x,A)]) (open 0 b (fvar x term_var)) ttrue))
+    && (is_valid d2 ((x,A)::Γ))
+    && (j3 ?= (EJ I3 Θ (Append [(p, T_equiv (fvar x term_var) t);(x,A)]) (open 0 b (fvar x term_var)) ttrue))
+    && (is_valid d3 ((p, T_equiv (fvar x term_var) t)::(x,A)::Γ))
     && (p ?∉ (fv_context Γ)) && (p ?∉ (fv b)) && (p ?∉ (fv t)) && (p ?∉ (fv A)) && (p ?∉ Θ)
     && (x ?∉ (fv_context Γ)) && (x ?∉ (fv b)) && (x ?∉ (fv t)) && (x ?∉ (fv A)) && (x ?∉ Θ)
     && (x ?<> p) && (is_annotated_termb b) && ((fv b) ?⊂ (fv_context Γ))
@@ -224,7 +228,7 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
                           ;(n, T_nat)])
                   (open 0 (open 1 ts (fvar n term_var)) (fvar y term_var))
                   (open 0 T (fvar n term_var))))
-    && (isValue (erase_term ts))
+    && (is_value (erase_term ts))
     && (is_valid d1 ((p, T_equiv (fvar y term_var) (tfix T ts))
                           ::(y, T_forall (T_refine T_nat (annotated_tlt (lvar 0 term_var) (fvar n term_var))) T)
                           ::(n, T_nat)::Γ))
@@ -316,6 +320,7 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     match refinementUnfoldInContext Γ Γ' with
     | Some (x, p, ty, P) => (
         (p ?∉ fv t) && (p ?∉ fv T) && (p ?∉ fv P) && (p ?∉ fv ty) && (p ?∉ fv_context Γ)
+        && (x ?<> p) && (x ?∉ fv ty) && (x ?∉ fv P)
         && (is_annotated_termb P) && ((fv ty) ?⊂ (support Γ')) && ((fv P) ?⊂ (support Γ'))
         && (wfb P 1))
     | None => false

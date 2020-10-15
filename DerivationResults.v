@@ -5,7 +5,6 @@ Require Export SystemFR.NatLessThanErase.
 
 Require Import List.
 Import ListNotations.
-From ReductionEffect Require Import PrintingEffect.
 
 
 
@@ -82,7 +81,6 @@ Proof.
     eauto 3 using singleton_subset, inList1, inList2, inList3, refinementUnfoldInContext_support3 with sets.
 Qed.
 
-
 (* Parameter SMT_Check (Θ Γ ... ) : Prop. *)
 
 Lemma trustSMTSolver_ADMITTED : forall Θ Γ cΓ t T c, is_valid (N (EJ E_SMT Θ cΓ t T) c) Γ = true -> [[Θ;Γ ⊨ t ≡ T]].
@@ -140,7 +138,7 @@ Ltac soundness_finish :=
            |- subset (pfv ?t term_var) ?A  => apply (subset_open_open k1 k2 t n3 n2 n1 A H H1 H2 H3)
          end || rewrite pfv_fvar || rewrite pfv_fvar2 || simpl || unfold fv || rewrite_deriv.
 
-Hint Rewrite isValueCorrect: deriv.
+Hint Rewrite is_value_correct : deriv.
 
 
 Ltac destruct_andb :=
@@ -151,6 +149,9 @@ Ltac destruct_andb :=
    pose proof (andb_prop b1 b2 H) as [H1 H2] ; clear H
   end.
 
+Opaque erase_term.
+Opaque erase_type.
+Opaque erase_context.
 
 
 (* Main soundess result *)
@@ -173,71 +174,75 @@ Proof.
   all: eauto 1 with deriv.
   all: try discriminate.
   all: unfold fv_context in *.
-  all:
+  all: try solve [
     try
       match goal with
-      | H: _ |- [[?Θ; ?Γ ⊨ ?t : drop_refinement ?T]] => eapply annotated_reducible_drop
-      | H: [[ ?Θ ; ((?p, _)::(?x,_)::_) ⊨ (open _ ?b _) ≡ ttrue ]] |- [[ ?Θ ; ?Γ ⊨ ?t : T_refine _ _ ]] => eapply (annotated_reducible_refine Θ Γ _ _ _  x p); eauto
-      | H: (is_nat_value ?t) |- [[?Θ; ?Γ ⊨ (succ ?t) : T_nat]] => apply (annotated_reducible_nat_value Θ Γ (succ t) (INVSucc t H)); cbv
-      | H: _
-        |- [[?Θ; ?Γ ⊨ (tmatch ?tn ?t0 ?ts) : ?T]] => apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3)
-      | H1: [[?Θ; (?x1, T_equiv _ ttrue)::?Γ ⊨ _ : _ ]],
-            H2: [[?Θ; (?x2, T_equiv _ tfalse)::?Γ ⊨ _ : _ ]]
+      | H: _ |- [[?Θ; ?Γ ⊨ ?t : drop_refinement ?T]] =>
+        eapply annotated_reducible_drop
+      | H: [[ ?Θ ; ((?p, _)::(?x,_)::_) ⊨ (open _ ?b _) ≡ ttrue ]] |- [[ ?Θ ; ?Γ ⊨ ?t : T_refine _ _ ]] =>
+        eapply (annotated_reducible_refine Θ Γ _ _ _  x p); eauto
+      | H: (is_nat_value ?t) |- [[?Θ; ?Γ ⊨ (succ ?t) : T_nat]] =>
+        apply (annotated_reducible_nat_value Θ Γ (succ t) (INVSucc t H)); cbv
+      | H: _ |- [[?Θ; ?Γ ⊨ (tmatch ?tn ?t0 ?ts) : ?T]] =>
+        apply (annotated_reducible_match Θ Γ _ _ _ T n7 n3)
+      | H1: [[?Θ; (?x1, T_equiv _ ttrue)::?Γ ⊨ _ : _ ]], H2: [[?Θ; (?x2, T_equiv _ tfalse)::?Γ ⊨ _ : _ ]]
         |- [[?Θ; ?Γ ⊨ (ite ?t1 ?t2 ?t3) : (T_ite _ ?T1 ?T2)]] =>
-        (apply (annotated_reducible_T_ite Θ Γ t1 t2 t3 T1 T2 x1 x2))
-      | H1: [[?Θ; (?x1, T_equiv _ ttrue)::?Γ ⊨ _ : _ ]],
-            H2: [[?Θ; (?x2, T_equiv _ tfalse)::?Γ ⊨ _ : _ ]]
-        |- [[?Θ; ?Γ ⊨ (ite ?t1 ?t2 ?t3) : ?T ]] => apply (annotated_reducible_ite Θ Γ t1 t2 t3 T x1 x2)
-      | H: [[?Θ; ?Γ ⊨ ?t : (T_prod ?A ?B)]]
-        |- [[?Θ; ?Γ ⊨ (pi1 ?t) : ?A]] => apply (annotated_reducible_pi1 Θ Γ t A B)
-      | H: [[?Θ; ?Γ ⊨ ?t : (T_prod ?A ?B)]]
-        |- [[?Θ; ?Γ ⊨ (pi2 ?t) : _]] => apply (annotated_reducible_pi2 Θ Γ t A B)
-      | H: _
-        |- [[?Θ; ?Γ ⊨ (pp ?t1 ?t2) : (T_prod ?A ?B)]] => eapply (annotated_reducible_pp Θ Γ A B t1 t2)
-      | H: [[?Θ; ?Γ ⊨ ?t1 : (T_arrow ?U ?V)]]
-        |- [[?Θ; ?Γ ⊨ (Trees.app ?t1 ?t2) : ?T]] => apply (annotated_reducible_app Θ Γ t1 t2 U V)
-      | H: [[?Θ; ?Γ ⊨ ?t1 : (T_sum ?A ?B)]], H1: ?y <> ?p
-        |- [[?Θ; ?Γ ⊨ (sum_match ?t1 ?t2 ?t3) : ?T]] => eapply (annotated_reducible_sum_match Θ Γ t1 t2 t3 A B _ y p)
-      | H: _
-        |- [[?Θ; ?Γ ⊨ (lambda ?T ?t) : _]] => eapply (annotated_reducible_lambda)
-      | H: ?x <> ?p
-        |- [[?Θ; ?Γ ⊨ (tlet ?t1 ?A ?t2) : _]] => apply (annotated_reducible_let Θ Γ t1 t2 x p A)
-      | H: ?x <> ?p, H1: [[?Θ; ?Γ ⊨ ?t1 : ?A]]
-        |- [[?Θ; ?Γ ⊨ (notype_tlet ?t1 ?t2) : _]] => apply (annotated_reducible_notype_tlet Θ Γ t1 t2 x p A)
-      | H: [[ ?Θ; (?p,_)::(?y,_)::(?n,_)::?Γ ⊨ _ : _ ]] |-  [[?Θ; ?Γ ⊨ (tfix ?t1 ?t2) : (T_forall T_nat ?t1)]] => apply (annotated_reducible_fix_strong_induction Θ Γ t2 t1 n y p)
-      | H: [[ ?Θ; ?Γ ⊨ ?t1 : (T_forall ?U ?V)]], H2 : [[_; _ ⊨ ?t2 : ?U]] |- _ => apply (annotated_reducible_forall_inst Θ Γ t1 t2 U V)
-      |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]], H2: [[?Θ; ?Γ ⊨ ?t2 ≡ ?t3]] |- [[?Θ; ?Γ ⊨ ?t1 ≡ ?t3 ]] => apply (annotated_equivalent_trans Θ Γ t1 t2 t3 H H2)
-      |H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]] |- [[?Θ; ?Γ ⊨ ?t2 ≡ ?t1 ]] => apply (annotated_equivalent_sym Θ Γ t1 t2 H)
-      |H: _ |- [[?Θ; ?Γ ⊨ ?t ≡ ?t ]] => apply (annotated_equivalent_refl Θ Γ t)
-      |H: _ |- [[?Θ; ?Γ ⊨ (lambda ?A ?t1) ≡ (lambda ?B ?t2) ]] => apply (annotated_equivalence_lambdas Θ Γ t1 t2 A B); eauto with wf
-      | H:  [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2]] |- [[?Θ; ?Γ ⊨ open 0 ?C ?t1 ≡ open 0 ?C ?t2]] => apply (annotated_equivalence_context Θ Γ C t1 t2)
-      |H1: [[ ?Θ ; ?Γ ⊨ ?t1 ≡ ?t2]], H2 : [[ ?Θ ; ?Γ ⊨ ?t1 : ?T]]
-       |- [[ ?Θ ; ?Γ ⊨ ?t2 : ?T]] => apply (annotated_equivalent_elim Θ Γ t1 t2 T)
-      |H: [[?Θ;?Γ ⊨ ?t : ?T_prod ?A ?B ]]
-       |-  [[?Θ;?Γ ⊨ ?t ≡ (pp (pi1 ?t) (pi2 ?t))]] => apply (annotated_equivalent_pair_ext Θ Γ t A B)
-      | H: refinementUnfoldInContext ?Γ0 ?Γ = Some (?x, ?p, ?ty, ?P) |- [[ ?Θ ; ?Γ ⊨ ?t : ?T]] =>
-        let Γ := fresh Γ in
-        let Γ' := fresh Γ' in
+        apply (annotated_reducible_T_ite Θ Γ t1 t2 t3 T1 T2 x1 x2)
+      | H1: [[?Θ; (?x1, T_equiv _ ttrue)::?Γ ⊨ _ : _ ]], H2: [[?Θ; (?x2, T_equiv _ tfalse)::?Γ ⊨ _ : _ ]]
+        |- [[?Θ; ?Γ ⊨ (ite ?t1 ?t2 ?t3) : ?T ]] =>
+        apply (annotated_reducible_ite Θ Γ t1 t2 t3 T x1 x2)
+      | H: [[?Θ; ?Γ ⊨ ?t : (T_prod ?A ?B)]] |- [[?Θ; ?Γ ⊨ _ (pi1 ?t) : ?A]] =>
+        apply (annotated_reducible_pi1 Θ Γ t A B)
+      | H: [[?Θ; ?Γ ⊨ ?t : (T_prod ?A ?B)]] |- [[?Θ; ?Γ ⊨ _ (pi2 ?t) : _]] =>
+        apply (annotated_reducible_pi2 Θ Γ t A B)
+      | H: _ |- [[?Θ; ?Γ ⊨ _ (pp ?t1 ?t2) : (T_prod ?A ?B)]] =>
+        eapply (annotated_reducible_pp Θ Γ A B t1 t2)
+      | H: [[?Θ; ?Γ ⊨ ?t1 : (T_arrow ?U ?V)]] |- [[?Θ; ?Γ ⊨ (Trees.app ?t1 ?t2) : ?T]] =>
+        apply (annotated_reducible_app Θ Γ t1 t2 U V)
+      | H: [[?Θ; ?Γ ⊨ ?t1 : (T_sum ?A ?B)]], H1: ?y <> ?p |- [[?Θ; ?Γ ⊨ (sum_match ?t1 ?t2 ?t3) : ?T]] =>
+        eapply (annotated_reducible_sum_match Θ Γ t1 t2 t3 A B _ y p)
+      | H: _ |- [[?Θ; ?Γ ⊨ (lambda ?T ?t) : _]] =>
+        eapply (annotated_reducible_lambda)
+      | H: ?x <> ?p |- [[?Θ; ?Γ ⊨ (tlet ?t1 ?A ?t2) : _]] =>
+        apply (annotated_reducible_let Θ Γ t1 t2 x p A)
+      | H: ?x <> ?p, H1: [[?Θ; ?Γ ⊨ ?t1 : ?A]] |- [[?Θ; ?Γ ⊨ (notype_tlet ?t1 ?t2) : _]] =>
+        apply (annotated_reducible_notype_tlet Θ Γ t1 t2 x p A)
+      | H: [[ ?Θ; (?p,_)::(?y,_)::(?n,_)::?Γ ⊨ _ : _ ]] |-  [[?Θ; ?Γ ⊨ (tfix ?t1 ?t2) : (T_forall T_nat ?t1)]] =>
+        apply (annotated_reducible_fix_strong_induction Θ Γ t2 t1 n y p)
+      | H: [[ ?Θ; ?Γ ⊨ ?t1 : (T_forall ?U ?V)]], H2 : [[_; _ ⊨ ?t2 : ?U]] |- _ =>
+        apply (annotated_reducible_forall_inst Θ Γ t1 t2 U V)
+      | H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]], H2: [[?Θ; ?Γ ⊨ ?t2 ≡ ?t3]] |- [[?Θ; ?Γ ⊨ ?t1 ≡ ?t3 ]] =>
+        apply (annotated_equivalent_trans Θ Γ t1 t2 t3 H H2)
+      | H: [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2 ]] |- [[?Θ; ?Γ ⊨ ?t2 ≡ ?t1 ]] =>
+        apply (annotated_equivalent_sym Θ Γ t1 t2 H)
+      | H: _ |- [[?Θ; ?Γ ⊨ ?t ≡ ?t ]] =>
+        apply (annotated_equivalent_refl Θ Γ t)
+      | H: _ |- [[?Θ; ?Γ ⊨ (lambda ?A ?t1) ≡ (lambda ?B ?t2) ]] =>
+        apply (annotated_equivalence_lambdas Θ Γ t1 t2 A B); eauto with wf
+      | H:  [[?Θ; ?Γ ⊨ ?t1 ≡ ?t2]] |- [[?Θ; ?Γ ⊨ open 0 ?C ?t1 ≡ open 0 ?C ?t2]] =>
+        apply (annotated_equivalence_context Θ Γ C t1 t2)
+      | H1: [[ ?Θ ; ?Γ ⊨ ?t1 ≡ ?t2]], H2 : [[ ?Θ ; ?Γ ⊨ ?t1 : ?T]]
+        |- [[ ?Θ ; ?Γ ⊨ ?t2 : ?T]] =>
+        apply (annotated_equivalent_elim Θ Γ t1 t2 T)
+      | H: [[?Θ;?Γ ⊨ ?t : ?T_prod ?A ?B ]] |-  [[?Θ;?Γ ⊨ ?t ≡ (pp (pi1 ?t) (pi2 ?t))]] =>
+        apply (annotated_equivalent_pair_ext Θ Γ t A B)
+    | H: refinementUnfoldInContext ?Γ ?Γ0 = Some (?x, ?p, ?ty, ?P) |- [[ ?Θ ; ?Γ ⊨ ?t : ?T]] =>
+        let Γ := fresh Γ1 in
+        let Γ' := fresh Γ2 in
         let fH := fresh H in
         rewrite refinementUnfoldInContext_prop in H; destruct H as [Γ [Γ' [H fH] ] ]; subst;
-          apply annotated_reducible_unfold_refine; eauto; rewrite support_append in *;
+          eapply annotated_reducible_fold_refine; eauto; rewrite support_append in *;
             rewrite fv_context_append in *;
-            list_utils; steps
-      | H: refinementUnfoldInContext ?Γ ?Γ0 = Some (?x, ?p, ?ty, ?P) |- [[ ?Θ ; ?Γ ⊨ ?t ≡ ?T]] =>
-        let Γ := fresh Γ in
-        let Γ' := fresh Γ' in
+            repeat list_utils || steps
+    | H: refinementUnfoldInContext ?Γ ?Γ0 = Some (?x, ?p, ?ty, ?P) |- [[ ?Θ ; ?Γ ⊨ ?t ≡ ?T]] =>
+        let Γ := fresh Γ1 in
+        let Γ' := fresh Γ2 in
         let fH := fresh H in
         rewrite refinementUnfoldInContext_prop in H; destruct H as [Γ [Γ' [H fH] ] ]; subst;
-          apply annotated_reducible_equivalent_unfold_refine; eauto; rewrite support_append in *;
+          eapply annotated_reducible_equivalent_fold_refine; eauto; rewrite support_append in *;
             rewrite fv_context_append in *;
-            list_utils; steps
-      end; soundness_finish; eauto with deriv.
-
-
-  rewrite refinementUnfoldInContext_prop in matched5.
-  destruct matched5 as [Γ1 [Γ2 [matched5 fH] ] ]. subst.
-  pose proof (annotated_reducible_refine).
-  pose proof (annotated_reducible_unfold_refine Θ Γ1 Γ2 n1 n2 t2 t1 t T H2 H11 H10 H9).
+            repeat list_utils || steps
+      end; soundness_finish; eauto with deriv].
 
   assert (is_valid (N (EJ E_SMT Θ Same t T) c) Γ = true).
   cbn; repeat bools || steps || autorewrite with deriv; eauto.

@@ -641,13 +641,13 @@ Qed.
 
 
 
-Definition closed_valueb t := (wfb t 0) && (is_erased_termb t) && (isValue t) && (list_nat_eq (fv t) nil).
+Definition closed_valueb t := (wfb t 0) && (is_erased_termb t) && (is_value t) && (list_nat_eq (fv t) nil).
 
 Lemma closed_valueb_prop :
   forall t, closed_valueb t = true <-> closed_value t.
 Proof.
   unfold closed_valueb, closed_value, closed_term.
-  repeat steps || bools || rewrite isValueCorrect in * || rewrite wfb_prop in * || rewrite is_erased_termb_prop in * || rewrite list_nat_eq_prop in *.
+  repeat steps || bools || rewrite is_value_correct in * || rewrite wfb_prop in * || rewrite is_erased_termb_prop in * || rewrite list_nat_eq_prop in *.
 Qed.
 
 Hint Rewrite closed_valueb_prop: deriv.

@@ -207,6 +207,6 @@ Proof.
     eauto 2 with twf.
 
   - repeat step || t_substitutions || simp_red_goal.
-  - repeat step || rewrite psubstitute_tlt in * || (rewrite substitute_shift in * by eauto 2 with wf step_tactic) || t_substitutions.
+  - repeat step || (rewrite substitute_shift in * by eauto 2 with wf step_tactic) || t_substitutions.
   - repeat step || t_substitutions || nodup.
 Qed.

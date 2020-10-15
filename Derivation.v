@@ -1,7 +1,6 @@
 Require Export SystemFR.DerivationTrees.
 Require Export SystemFR.Syntax.
 Require Export SystemFR.Evaluator.
-Require Export SystemFR.NatLessThanErase.
 
 Require Import List.
 Import ListNotations.
@@ -223,15 +222,16 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
   | N (TJ J_Fix Θ _ (tfix T ts) (T_forall T_nat T'))
       ((N ((TJ I1 _ (Append [(p, _);(y, _);(n, _)]) _ _) as j1) _ as d1) :: nil) =>
     (tree_eq T T')
-    && (j1 ?= (TJ I1 Θ (Append [(p, T_equiv (fvar y term_var) (tfix T ts))
-                          ;(y, T_forall (T_refine T_nat (annotated_tlt (lvar 0 term_var) (fvar n term_var))) T)
-                          ;(n, T_nat)])
+    && (j1 ?= (TJ I1 Θ
+                  (Append [(p, T_equiv (fvar y term_var) (tfix T ts))
+                           ;(y, T_forall (T_refine T_nat (binary_primitive Lt (lvar 0 term_var) (fvar n term_var))) T)
+                           ;(n, T_nat)])
                   (open 0 (open 1 ts (fvar n term_var)) (fvar y term_var))
                   (open 0 T (fvar n term_var))))
     && (is_value (erase_term ts))
     && (is_valid d1 ((p, T_equiv (fvar y term_var) (tfix T ts))
-                          ::(y, T_forall (T_refine T_nat (annotated_tlt (lvar 0 term_var) (fvar n term_var))) T)
-                          ::(n, T_nat)::Γ))
+                       ::(y, T_forall (T_refine T_nat (binary_primitive Lt (lvar 0 term_var) (fvar n term_var))) T)
+                       ::(n, T_nat)::Γ))
     && (n ?∉ (fv_context Γ)) && (y ?∉ (fv_context Γ)) && (p ?∉ (fv_context Γ))
     && (n ?∉ (fv T)) && (y ?∉ (fv T)) && (p ?∉ (fv T))
     && (n ?∉ (fv ts)) && (y ?∉ (fv ts)) && (p ?∉ (fv ts))

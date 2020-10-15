@@ -4,6 +4,7 @@ Require Import Relations.
 Require Export SystemFR.PrimitiveSize.
 Require Export SystemFR.PrimitiveRecognizers.
 
+
 Inductive cbv_value: tree -> Prop :=
 | IVUnit: cbv_value uu
 | IVZero: cbv_value zero
@@ -39,6 +40,7 @@ Ltac cbv_value t :=
         | notype_lambda _ => idtac
         | tleft ?v => cbv_value v
         | tright ?v => cbv_value v
+        | build_nat ?n => idtac
         end
   end.
 
@@ -59,12 +61,14 @@ Proof.
   - exists (S n); steps.
 Qed.
 
+
 Ltac is_nat_value_buildable :=
   match goal with
   | H: is_nat_value ?v |- _ =>
     poseNew (Mark v "is_nat_value_buildable");
     pose proof (is_nat_value_buildable v H)
   end.
+
 
 Lemma tree_size_build_nat:
   forall n, tree_size (build_nat n) = n.
@@ -102,35 +106,12 @@ Proof.
   destruct v; steps.
 Qed.
 
+
 Hint Immediate is_nat_value_build_nat: values.
 Hint Immediate cbv_value_build_nat: values.
 Hint Immediate cbv_value_is_pair: values.
 Hint Immediate cbv_value_is_succ: values.
 Hint Immediate cbv_value_is_lambda: values.
-
-Fixpoint top_level_var (t: tree): Prop :=
-  match t with
-  | fvar _ term_var => True
-  | uu => False
-  | zero => False
-  | succ v => top_level_var v
-  | tfalse => False
-  | ttrue => False
-  | pp v1 v2 => top_level_var v1 \/ top_level_var v2
-  | notype_lambda t => False
-  | tleft v => top_level_var v
-  | tright v => top_level_var v
-  | _ => False
-  end.
-
-Lemma fv_nil_top_level_var:
-  forall t,
-    pfv t term_var = nil ->
-    ~ top_level_var t.
-Proof.
-  induction t;
-    repeat step || list_utils || unfold singleton, add in *.
-Qed.
 
 Reserved Notation "t1 '~>' t2" (at level 20).
 
@@ -177,24 +158,77 @@ Inductive scbv_step: tree -> tree -> Prop :=
 | SPBetaSize:
     forall v,
       cbv_value v ->
-      ~ top_level_var v ->
       tsize v ~> build_nat (tsize_semantics v)
 
 | SPBetaIsPair:
     forall v,
       cbv_value v ->
-      ~ top_level_var v ->
       boolean_recognizer 0 v ~> is_pair v
 | SPBetaIsSucc:
     forall v,
       cbv_value v ->
-      ~ top_level_var v ->
       boolean_recognizer 1 v ~> is_succ v
 | SPBetaIsLambda:
     forall v,
       cbv_value v ->
-      ~ top_level_var v ->
       boolean_recognizer 2 v ~> is_lambda v
+
+(* Primitive beta reduction *)
+| SPBetaPlus: forall v1 v2 n1 n2,
+    v1 = build_nat n1 ->
+    v2 = build_nat n2 ->
+    scbv_step (binary_primitive Plus v1 v2) (build_nat (n1 + n2))
+| SPBetaMinus: forall v1 v2 n1 n2,
+    v1 = build_nat n1 ->
+    v2 = build_nat n2 ->
+    n1 >= n2 ->
+    scbv_step (binary_primitive Minus v1 v2) (build_nat (n1 - n2))
+| SPBetaMul: forall v1 v2 n1 n2,
+    v1 = build_nat n1 ->
+    v2 = build_nat n2 ->
+    scbv_step (binary_primitive Mul v1 v2) (build_nat (n1 * n2))
+| SPBetaDiv: forall v1 v2 n1 n2,
+    v1 = build_nat n1 ->
+    v2 = build_nat n2 ->
+    n2 > 0 ->
+    scbv_step (binary_primitive Div v1 v2) (build_nat (PeanoNat.Nat.div n1 n2))
+| SPBetaEq: forall v1 v2 n1 n2,
+    v1 = build_nat n1 ->
+    v2 = build_nat n2 ->
+    scbv_step (binary_primitive Eq  v1 v2) (if PeanoNat.Nat.eqb n1 n2 then ttrue else tfalse)
+| SPBetaNeq: forall v1 v2 n1 n2,
+    v1 = build_nat n1 ->
+    v2 = build_nat n2 ->
+    scbv_step (binary_primitive Neq v1 v2) (if (PeanoNat.Nat.eq_dec n1 n2) then tfalse else ttrue)
+| SPBetaLt: forall v1 v2 n1 n2,
+    v1 = build_nat n1 ->
+    v2 = build_nat n2 ->
+    scbv_step (binary_primitive Lt  v1 v2) (if PeanoNat.Nat.ltb n1 n2 then ttrue else tfalse)
+| SPBetaLeq: forall v1 v2 n1 n2,
+    v1 = build_nat n1 ->
+    v2 = build_nat n2 ->
+    scbv_step (binary_primitive Leq v1 v2) (if PeanoNat.Nat.leb n1 n2 then ttrue else tfalse)
+| SPBetaGt: forall v1 v2 n1 n2,
+    v1 = build_nat n1 ->
+    v2 = build_nat n2 ->
+    scbv_step (binary_primitive Gt  v1 v2) (if PeanoNat.Nat.leb n1 n2 then tfalse else ttrue)
+| SPBetaGeq: forall v1 v2 n1 n2,
+    v1 = build_nat n1 ->
+    v2 = build_nat n2 ->
+    scbv_step (binary_primitive Geq v1 v2) (if PeanoNat.Nat.ltb n1 n2 then tfalse else ttrue)
+
+| SPBetaNot1: scbv_step (unary_primitive Not ttrue) tfalse
+| SPBetaNot2: scbv_step (unary_primitive Not tfalse) ttrue
+
+| SPBetaAnd1: scbv_step (binary_primitive And ttrue ttrue) ttrue
+| SPBetaAnd2: scbv_step (binary_primitive And ttrue tfalse) tfalse
+| SPBetaAnd3: scbv_step (binary_primitive And tfalse ttrue) tfalse
+| SPBetaAnd4: scbv_step (binary_primitive And tfalse tfalse) tfalse
+
+| SPBetaOr1: scbv_step (binary_primitive Or tfalse tfalse) tfalse
+| SPBetaOr2: scbv_step (binary_primitive Or tfalse ttrue) ttrue
+| SPBetaOr3: scbv_step (binary_primitive Or ttrue tfalse) ttrue
+| SPBetaOr4: scbv_step (binary_primitive Or ttrue ttrue) ttrue
 
 (* reduction inside terms *)
 | SPAppLeft: forall t1 t2 t,
@@ -224,6 +258,17 @@ Inductive scbv_step: tree -> tree -> Prop :=
 | SPMatch: forall t1 t2 t0 ts,
     t1 ~> t2 ->
     tmatch t1 t0 ts ~> tmatch t2 t0 ts
+
+| SPUnaryPrimitive: forall o t1 t2,
+    scbv_step t1 t2 ->
+    scbv_step (unary_primitive o t1) (unary_primitive o t2)
+| SPBinaryPrimitive1: forall o t1 t2 t,
+    scbv_step t1 t2 ->
+    scbv_step (binary_primitive o t1 t) (binary_primitive o t2 t)
+| SPBinaryPrimitive2: forall o v t1 t2,
+    scbv_step t1 t2 ->
+    cbv_value v ->
+    scbv_step (binary_primitive o v t1) (binary_primitive o v t2)
 
 | SPIte: forall t1 t1' t2 t3,
     t1 ~> t1' ->
@@ -275,6 +320,8 @@ Ltac t_invert_step :=
   | H: pi2 _ ~> _ |- _ => inversion H; clear H
   | H: sum_match _ _ _ ~> _ |- _ => inversion H; clear H
   | H: tsize _ ~> _ |- _ => inversion H; clear H
+  | H: unary_primitive _ _ ~> _ |- _ => inversion H; clear H
+  | H: binary_primitive _ _ _ ~> _ |- _ => inversion H; clear H
   end.
 
 Lemma evaluate_step:
@@ -329,6 +376,14 @@ Qed.
 
 Hint Immediate is_nat_value_value: values.
 
+Lemma evaluate_step_build_nat:
+  forall t n,
+    scbv_step (build_nat n) t -> False.
+Proof.
+  eauto using evaluate_step2 with values.
+Qed.
+Hint Immediate evaluate_step_build_nat: smallstep.
+
 Lemma is_nat_value_erased:
   forall v,
     is_nat_value v ->
@@ -342,6 +397,7 @@ Hint Immediate is_nat_value_erased: erased.
 Ltac no_step :=
   match goal with
   | H: cbv_value err |- _ => inversion H
+  | H: build_nat ?n ~> ?t |- _ => apply evaluate_step_build_nat in H; apply False_ind, H
   | H1: cbv_value ?v,
     H2: ?v ~> ?t |- _ =>
     apply False_ind; apply evaluate_step with v t; auto 2
@@ -368,8 +424,9 @@ Lemma deterministic_step:
       t1 ~> t3 ->
       t2 = t3.
 Proof.
-  induction 1; repeat step || t_equality;
-    try solve [ repeat step || t_invert_step || no_step || t_equality ].
+  induction 1; repeat light || t_equality;
+    try solve [ t_invert_step; repeat light || no_step || t_equality || build_nat_inj ];
+    try solve [ t_invert_step; repeat light; try t_invert_step; repeat light || no_step || t_equality ].
 Qed.
 
 Ltac deterministic_step :=

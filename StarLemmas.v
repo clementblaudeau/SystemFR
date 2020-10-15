@@ -120,6 +120,54 @@ Proof.
   induction 1; steps; eauto with smallstep star.
 Qed.
 
+Lemma star_smallstep_unary_primitive:
+  forall t1 t2,
+    t1 ~>* t2 ->
+    forall o,
+      unary_primitive o t1 ~>* unary_primitive o t2.
+Proof.
+  induction 1; steps; eauto with smallstep star.
+Qed.
+
+Lemma star_smallstep_binary_primitive_l:
+  forall t1 t2,
+    t1 ~>* t2 ->
+    forall o t,
+      binary_primitive o t1 t ~>* binary_primitive o t2 t.
+Proof.
+  induction 1; steps; eauto with smallstep star.
+Qed.
+
+Lemma star_smallstep_binary_primitive_r:
+  forall t1 t2,
+    t1 ~>* t2 ->
+    forall o v,
+      cbv_value v ->
+      binary_primitive o v t1 ~>* binary_primitive o v t2.
+Proof.
+  induction 1; steps; eauto with smallstep star.
+Qed.
+
+
+Lemma star_smallstep_binary_primitive:
+  forall t1 v1 t2 v2 o,
+    t1 ~>* v1 ->
+    t2 ~>* v2 ->
+    cbv_value v1 ->
+    cbv_value v2 ->
+    binary_primitive o t1 t2 ~>* binary_primitive o v1 v2.
+Proof.
+  steps;
+    eauto using star_trans,
+    star_smallstep_binary_primitive_l,
+    star_smallstep_binary_primitive_r with cbvlemmas.
+Qed.
+
+Hint Resolve star_smallstep_binary_primitive: cbvlemmas.
+Hint Resolve star_smallstep_unary_primitive: cbvlemmas.
+Hint Resolve star_smallstep_binary_primitive_l: cbvlemmas.
+Hint Resolve star_smallstep_binary_primitive_r: cbvlemmas.
+
 Lemma star_smallstep_err:
   forall t v,
     t ~>* v ->

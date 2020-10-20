@@ -4,7 +4,8 @@ Import Coq.Bool.Bool.
 
 Inductive fv_tag: Set := term_var | type_var.
 
-Inductive op: Set := Plus | Minus | Mul | Div | Eq | Neq | Lt | Leq | Gt | Geq | Not | And | Or | Cup | Nop .
+Inductive bin_op: Set := Plus | Minus | Mul | Div | Eq | Neq | Lt | Leq | Gt | Geq | And | Or.
+Inductive un_op := Not.
 
 Ltac destruct_tag :=
   match goal with
@@ -66,8 +67,8 @@ Inductive tree: Set :=
   | succ: tree -> tree
   | tmatch: tree -> tree -> tree -> tree
 
-  | unary_primitive : op -> tree -> tree
-  | binary_primitive : op -> tree -> tree -> tree
+  | unary_primitive : un_op -> tree -> tree
+  | binary_primitive : bin_op -> tree -> tree -> tree
 
   | tfix: tree -> tree -> tree
   | notype_tfix: tree -> tree

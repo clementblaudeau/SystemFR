@@ -18,6 +18,7 @@ Require Export SystemFR.AnnotatedEquivalentPairExt.
 Require Export SystemFR.AnnotatedEquivalentRefine.
 Require Export SystemFR.AnnotatedSub.
 Require Export SystemFR.AnnotatedRefine.
+Require Export SystemFR.AnnotatedPrimitive.
 
 Import Coq.Strings.String.
 Import Coq.Bool.Bool.

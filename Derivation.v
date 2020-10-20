@@ -86,6 +86,39 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     && ((fv B) ?⊂ (support Γ))
     && (tree_eq T (open 0 B (pi1 t)))
 
+  (* Primitives *)
+  | N (TJ J_UnPrimitive Θ _ (unary_primitive Not t1) T_bool)
+      (( N ((TJ I1 _ Same _ T_bool) as j1) _ as d1)::nil) =>
+    (j1 ?= (TJ I1 Θ Same t1 T_bool)) && (is_valid d1 Γ)
+
+  | N (TJ J_BinPrimitive Θ _ (binary_primitive (Plus | Mul) t1 t2) T_nat)
+      (( N ((TJ I1 _ Same _ _) as j1) _ as d1)
+         :: (N ((TJ I2 _ Same _ _) as j2) _ as d2)::nil) =>
+    (j1 ?= (TJ I1 Θ Same t1 T_nat)) && (is_valid d1 Γ)
+    && (j2 ?= (TJ I2 Θ Same t2 T_nat)) && (is_valid d2 Γ)
+
+  | N (TJ J_BinPrimitive Θ _ (binary_primitive (Lt | Leq | Gt | Geq | Eq | Neq) t1 t2) T_bool)
+      (( N ((TJ I1 _ Same _ _) as j1) _ as d1)
+         :: (N ((TJ I2 _ Same _ _) as j2) _ as d2)::nil) =>
+    (j1 ?= (TJ I1 Θ Same t1 T_nat)) && (is_valid d1 Γ)
+    && (j2 ?= (TJ I2 Θ Same t2 T_nat)) && (is_valid d2 Γ)
+
+  | N (TJ J_BinPrimitive Θ _ (binary_primitive Minus t1 t2) T_nat)
+      (( N ((TJ I1 _ Same _ _) as j1) _ as d1)
+         :: (N ((TJ I2 _ Same _ _) as j2) _ as d2)
+         :: (N ((EJ I3 _ Same _ _) as j3) _ as d3)::nil) =>
+    (j1 ?= (TJ I1 Θ Same t1 T_nat)) && (is_valid d1 Γ)
+    && (j2 ?= (TJ I2 Θ Same t2 T_nat)) && (is_valid d2 Γ)
+    && (j3 ?= (EJ I3 Θ Same (binary_primitive Geq t1 t2) ttrue)) && (is_valid d3 Γ)
+
+  | N (TJ J_BinPrimitive Θ _ (binary_primitive Div t1 t2) T_nat)
+      (( N ((TJ I1 _ Same _ _) as j1) _ as d1)
+         :: (N ((TJ I2 _ Same _ _) as j2) _ as d2)
+         :: (N ((EJ I3 _ Same _ _) as j3) _ as d3)::nil) =>
+    (j1 ?= (TJ I1 Θ Same t1 T_nat)) && (is_valid d1 Γ)
+    && (j2 ?= (TJ I2 Θ Same t2 T_nat)) && (is_valid d2 Γ)
+    && (j3 ?= (EJ I3 Θ Same (binary_primitive Gt t2 zero) ttrue)) && (is_valid d3 Γ)
+
   (* Sums *)
   (* Left *)
   | N (TJ J_Left Θ _ (tleft t) (T_sum A B))

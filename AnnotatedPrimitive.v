@@ -92,3 +92,17 @@ Lemma annotated_reducible_primitive_Or:
     [[ Θ; Γ ⊨ t2 : T_bool ]] ->
     [[ Θ; Γ ⊨ binary_primitive Or t1 t2 : T_bool]].
 Proof. steps; eauto with primitives. Qed.
+
+Hint Resolve annotated_reducible_primitive_And: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Div: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Eq: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Geq: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Gt: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Leq: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Lt: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Minus: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Mul: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Neq: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Not: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Or: annotated_primitives.
+Hint Resolve annotated_reducible_primitive_Plus: annotated_primitives.

@@ -15,8 +15,15 @@ Proof.
   destruct tag1, tag2; try solve [(left; reflexivity) || (right; congruence)].
 Defined.
 
-Lemma op_eq_dec:
-  forall o1 o2: op, { o1 = o2 } + { o1 <> o2 }.
+Lemma bin_op_eq_dec:
+  forall o1 o2: bin_op, { o1 = o2 } + { o1 <> o2 }.
+Proof.
+  intros.
+  decide equality.
+Defined.
+
+Lemma un_op_eq_dec:
+  forall o1 o2: un_op, { o1 = o2 } + { o1 <> o2 }.
 Proof.
   intros.
   decide equality.

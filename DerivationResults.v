@@ -242,7 +242,7 @@ Proof.
           eapply annotated_reducible_equivalent_fold_refine; eauto; rewrite support_append in *;
             rewrite fv_context_append in *;
             repeat list_utils || steps
-      end; soundness_finish; eauto with deriv].
+      end; soundness_finish; eauto with deriv annotated_primitives].
 
   assert (is_valid (N (EJ E_SMT Θ Same t T) c) Γ = true).
   cbn; repeat bools || steps || autorewrite with deriv; eauto.

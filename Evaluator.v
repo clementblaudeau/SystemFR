@@ -93,7 +93,7 @@ Proof.
 Qed.
 
 
-Definition ss_eval_binary_primitive (o:op) t1 t2 :=
+Definition ss_eval_binary_primitive o t1 t2 :=
   match (get_nat t1), (get_nat t2) with
   | (Some n1), (Some n2) => (
       match o with
@@ -111,7 +111,7 @@ Definition ss_eval_binary_primitive (o:op) t1 t2 :=
       | Leq => Some (if (PeanoNat.Nat.leb n1 n2) then ttrue else tfalse)
       | Gt => Some (if (PeanoNat.Nat.leb n1 n2) then tfalse else ttrue)
       | Geq => Some (if (PeanoNat.Nat.ltb n1 n2) then tfalse else ttrue)
-      | And | Or | Not | Cup | Nop => None  end)
+      | And | Or  => None  end)
   | _, _ => match o,t1,t2 with
            | And, ttrue, ttrue => Some ttrue
            | And, ttrue, tfalse => Some tfalse
@@ -229,7 +229,7 @@ Fixpoint ss_eval (t: tree) {struct t}: (option tree) :=
                                            | ttrue => Some (tfalse)
                                            | tfalse => Some (ttrue)
                                            | _ => None end
-                                   | _ => None end
+                                   end
                           end
 
   | binary_primitive o t1 t2 => match (is_value t1) with

@@ -55,6 +55,8 @@ Inductive TJ_name :=
 | J_Match
 | J_Bool
 | J_If
+| J_UnPrimitive
+| J_BinPrimitive
 | J_PP
 | J_Pi1 | J_Pi2
 | J_App

@@ -64,6 +64,36 @@ Proof.
 Qed.
 
 
+Lemma open_reducible_refine2:
+  forall Θ Γ t A b x p,
+    wf b 1 ->
+    wf t 0 ->
+    subset (fv t) (support Γ) ->
+    ~(p ∈ fv b) ->
+    ~(p ∈ fv t) ->
+    ~(p ∈ fv A) ->
+    ~(p ∈ fv_context Γ) ->
+    ~(x ∈ fv b) ->
+    ~(x ∈ fv A) ->
+    ~(x ∈ fv_context Γ) ->
+    ~(x = p) ->
+    is_erased_term b ->
+    subset (fv b) (support Γ) ->
+    [ Θ; Γ ⊨ t : A ] ->
+    [ Θ; (p, T_equiv (fvar x term_var) t)::(x,A)::Γ ⊨ open 0 b (fvar x term_var) ≡ ttrue ] ->
+    [ Θ; Γ ⊨ t : T_refine A b ].
+Proof.
+  unfold open_reducible; repeat step || t_instantiate_sat3.
+  apply reducible_refine; steps; t_closer.
+  unfold open_equivalent in H13.
+
+  unshelve epose proof (H13 ρ ((p,uu)::(x,v) :: lterms) _ _ _);
+    repeat step || apply SatCons || list_utils || t_substitutions || simp_red;
+    eauto using equivalent_sym;
+    eauto with fv wf twf.
+Qed.
+
+
 Lemma open_reducible_refine_unfold:
     forall Θ Γ Γ' x p ty P t T,
     ~(p ∈ fv t) ->

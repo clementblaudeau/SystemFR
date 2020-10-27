@@ -232,13 +232,10 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
   (* Add refinement *)
   | N (TJ J_refine Θ _ t (T_refine A b))
       (( N ((TJ I1 _ Same _ _) as j1) _ as d1)
-         :: ( N ((TJ I2 _ (Append [(x, _)]) _ T_bool) as j2) _ as d2)
-         :: ( N ((EJ I3 _ (Append [(p, _);(_, _)]) B ttrue) as j3) _ as d3):: nil) =>
+         :: ( N ((EJ I2 _ (Append [(p, _);(x, _)]) B ttrue) as j2) _ as d2):: nil) =>
     (j1 ?= (TJ I1 Θ Same t A)) && (is_valid d1 Γ)
-    && (j2 ?= (TJ I2 Θ (Append [(x,A)]) (open 0 b (fvar x term_var)) ttrue))
-    && (is_valid d2 ((x,A)::Γ))
-    && (j3 ?= (EJ I3 Θ (Append [(p, T_equiv (fvar x term_var) t);(x,A)]) (open 0 b (fvar x term_var)) ttrue))
-    && (is_valid d3 ((p, T_equiv (fvar x term_var) t)::(x,A)::Γ))
+    && (j2 ?= (EJ I2 Θ (Append [(p, T_equiv (fvar x term_var) t);(x,A)]) (open 0 b (fvar x term_var)) ttrue))
+    && (is_valid d2 ((p, T_equiv (fvar x term_var) t)::(x,A)::Γ))
     && (p ?∉ (fv_context Γ)) && (p ?∉ (fv b)) && (p ?∉ (fv t)) && (p ?∉ (fv A)) && (p ?∉ Θ)
     && (x ?∉ (fv_context Γ)) && (x ?∉ (fv b)) && (x ?∉ (fv t)) && (x ?∉ (fv A)) && (x ?∉ Θ)
     && (x ?<> p) && (is_annotated_termb b) && ((fv b) ?⊂ (fv_context Γ))
@@ -269,7 +266,7 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     && (n ?∉ (fv T)) && (y ?∉ (fv T)) && (p ?∉ (fv T))
     && (n ?∉ (fv ts)) && (y ?∉ (fv ts)) && (p ?∉ (fv ts))
     && (n ?∉ Θ) && (y ?∉ Θ) && (p ?∉ Θ)
-    && (NoDupb (n::y::p::nil)) && (wfb (erase_term ts) 1) && (wfb ts 1)
+    && (NoDupb (n::y::p::nil)) && (wfb (erase_term ts) 1) && (wfb T 1)
     && (is_annotated_termb ts) && (is_annotated_typeb T)
 
   (* Elimination *)
@@ -394,7 +391,7 @@ Fixpoint split_goals (dv:derivation) Γ1 :=
             | N (TJ  n _ (New Γ2) _ _) _
             | N (EJ  n _ (New Γ2) _ _) _
             | N (StJ n _ (New Γ2) _ _) _ => Γ2 end in
-  N ((is_valid dv Γ0), (extract_name dv), (List.firstn ((length Γ0) - 13) Γ0) ) (
+  N ((is_valid dv Γ0), (extract_name dv), Γ0 ) (
       match dv with
       | N J nil => nil
       | N J (d1::nil) => (split_goals d1 Γ0)::nil

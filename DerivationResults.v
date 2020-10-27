@@ -31,7 +31,7 @@ Proof.
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
   all: repeat subst || light_bool || match goal with | H: wf (_ _) _ |- _ => simpl in H end || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens_is_valid || unfold closed_value, closed_term in * ; simpl.
-  all: repeat split; eauto with wf deriv.
+  all: repeat split; eauto using wf_open_rev with wf deriv.
 Qed.
 
 
@@ -180,7 +180,7 @@ Proof.
       | H: _ |- [[?Θ; ?Γ ⊨ ?t : drop_refinement ?T]] =>
         eapply annotated_reducible_drop
       | H: [[ ?Θ ; ((?p, _)::(?x,_)::_) ⊨ (open _ ?b _) ≡ ttrue ]] |- [[ ?Θ ; ?Γ ⊨ ?t : T_refine _ _ ]] =>
-        eapply (annotated_reducible_refine Θ Γ _ _ _  x p); eauto
+        eapply (annotated_reducible_refine2 Θ Γ _ _ _  x p); eauto
       | H: (is_nat_value ?t) |- [[?Θ; ?Γ ⊨ (succ ?t) : T_nat]] =>
         apply (annotated_reducible_nat_value Θ Γ (succ t) (INVSucc t H)); cbv
       | H: _ |- [[?Θ; ?Γ ⊨ (tmatch ?tn ?t0 ?ts) : ?T]] =>

@@ -97,6 +97,12 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     (j1 ?= (TJ I1 Θ Same t1 T_nat)) && (is_valid d1 Γ)
     && (j2 ?= (TJ I2 Θ Same t2 T_nat)) && (is_valid d2 Γ)
 
+  | N (TJ J_BinPrimitive Θ _ (binary_primitive (And | Or) t1 t2) T_bool)
+      (( N ((TJ I1 _ Same _ _) as j1) _ as d1)
+         :: (N ((TJ I2 _ Same _ _) as j2) _ as d2)::nil) =>
+    (j1 ?= (TJ I1 Θ Same t1 T_bool)) && (is_valid d1 Γ)
+    && (j2 ?= (TJ I2 Θ Same t2 T_bool)) && (is_valid d2 Γ)
+
   | N (TJ J_BinPrimitive Θ _ (binary_primitive (Lt | Leq | Gt | Geq | Eq | Neq) t1 t2) T_bool)
       (( N ((TJ I1 _ Same _ _) as j1) _ as d1)
          :: (N ((TJ I2 _ Same _ _) as j2) _ as d2)::nil) =>

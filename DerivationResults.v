@@ -31,7 +31,8 @@ Proof.
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
   all: repeat subst || light_bool || match goal with | H: wf (_ _) _ |- _ => simpl in H end || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens_is_valid || unfold closed_value, closed_term in * ; simpl.
-  all: repeat split; eauto using wf_open_rev with wf deriv.
+  all: repeat split || reflexivity.
+  all: try (eapply wf_topen; simpl; repeat split); eauto using wf_open_rev with wf deriv.
 Qed.
 
 
@@ -51,6 +52,9 @@ Proof.
   all: unfold fv_context in *.
   all: repeat light_bool || subst || inst_list_prop || modus_ponens_is_valid.
   all: repeat rewrite_deriv || invert_constructor_equalities || subst.
+  all: repeat split; try apply subset_nil.
+  all: repeat eapply subset_union2.
+  all: eauto 3 using singleton_subset, support_open, inList1, inList2, inList3, nat_value_fv, subset_nil, subset_add3, fv_open, subset_transitive, subset_union2, fv_topen.
   all: repeat subst || light_bool || rewrite_deriv || discriminate || rewrite pfv_fvar || rewrite pfv_fvar2 ||
               match goal with
               | H1: ~ ?x ∈ ?A, H2: subset ?A (?x::?B) |- _ => apply (subset_add3 _ x A B H1) in H2
@@ -75,10 +79,11 @@ Proof.
                        H2: ~ ?n2 ∈ (fv ?t),
                            H3: ~ ?n1 ∈ (fv ?t)
                 |- subset (pfv ?t term_var) ?A  => apply (subset_open_open k1 k2 t n3 n2 n1 A H H1 H2 H3)
+              (* | H:_|- subset (pfv (topen _ _ _) _) _ => eapply subset_transitive; try eapply fv_topen *)
               | H: subset( fv (_ _ _)) _ |- _ => cbn in H
               end
-       || invert_constructor_equalities || apply support_open2 || simpl || split || rewrite_any || unfold closed_value, closed_term in * ;
-    eauto 3 using singleton_subset, inList1, inList2, inList3, refinementUnfoldInContext_support3 with sets.
+       || invert_constructor_equalities || apply support_open2 || simpl || split || rewrite_any || unfold closed_value, closed_term in *.
+  all: eauto using singleton_subset, inList1, inList2, inList3, refinementUnfoldInContext_support3, fv_topen, subset_transitive, subset_union2, subset_nil, drop_refinement_pfv_subset .
 Qed.
 
 (* Parameter SMT_Check (Θ Γ ... ) : Prop. *)
@@ -242,8 +247,13 @@ Proof.
           eapply annotated_reducible_equivalent_fold_refine; eauto; rewrite support_append in *;
             rewrite fv_context_append in *;
             repeat list_utils || steps
+    | H: [[?Θ;?Γ ⊨ ?t1 ≡ zero]], H1: [[_;_ ⊨ ?t0: (T_rec ?t1 ?T ?t3_3)]] |- [[_;_⊨ (tunfold ?t0):?T]] =>
+      apply (annotated_reducible_unfold_z Θ Γ t0 t1 T t3_3); eauto
+    | H: [[?Θ;?Γ ⊨ _ ≡ ttrue]], H1: [[_;_ ⊨ ?t0: (T_rec _ _ _)]] |- [[_;_⊨ (tunfold ?t0) : ?T]] =>
+      eapply annotated_reducible_unfold_s; eauto
+    | H1: [[_;_ ⊨ ?t1 : (T_rec ?n ?T0 ?Ts)]], H2:[[_;((?p2, _)::(?p1, _)::(?y,_)::_) ⊨ _: ?T ]] |- [[_;_⊨ (tunfold_in _ _ ) : _]] =>
+      eapply (annotated_reducible_unfold_in _ _ _ _ n T0 Ts p1 p2 y _); eauto
       end; soundness_finish; eauto with deriv annotated_primitives].
-
   assert (is_valid (N (EJ E_SMT Θ Same t T) c) Γ = true).
   cbn; repeat bools || steps || autorewrite with deriv; eauto.
   eauto using trustSMTSolver_ADMITTED.

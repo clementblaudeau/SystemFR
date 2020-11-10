@@ -21,6 +21,7 @@ Require Export SystemFR.AnnotatedErr.
 Require Export SystemFR.AnnotatedQuant.
 Require Export SystemFR.DerivationHelpers.
 Require Export SystemFR.AnnotatedTop.
+Require Export SystemFR.AnnotatedRec.
 Require Import Psatz.
 
 
@@ -73,7 +74,12 @@ Inductive TJ_name :=
 | J_refine_unfold
 | J_forall_inst
 | J_Top
-| J_Top_value.
+| J_Top_value
+| J_Unfold_z
+| J_Unfold_s
+| J_Unfold_in
+| J_Unfold_pos_in
+| J_Fold.
 
 
 Inductive StJ_name :=

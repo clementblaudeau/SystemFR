@@ -19,6 +19,8 @@ Require Export SystemFR.AnnotatedEquivalentRefine.
 Require Export SystemFR.AnnotatedSub.
 Require Export SystemFR.AnnotatedRefine.
 Require Export SystemFR.AnnotatedPrimitive.
+Require Export SystemFR.AnnotatedRec.
+Require Export SystemFR.AnnotatedRecGen.
 
 Import Coq.Strings.String.
 Import Coq.Bool.Bool.
@@ -140,7 +142,41 @@ Proof.
   repeat bools || steps || rewrite  wfb_prop in * || eauto with eapply_any.
 Qed.
 
-Hint Rewrite wfb_prop wfsb_prop: deriv.
+Fixpoint twfb (t : tree) (k : nat): bool :=
+  match t with
+  | lvar i term_var => true
+  | lvar i type_var => PeanoNat.Nat.ltb i k
+  | T_refine T p => twfb T k && twfb p k
+  | T_arrow T1 T2 | T_prod T1 T2 | T_sum T1 T2 | T_type_refine T1 T2 | T_intersection T1 T2 |
+    T_union T1 T2 | T_forall T1 T2 | T_exists T1 T2 => twfb T1 k && twfb T2 k
+  | T_abs T => twfb T (S k)
+  | T_rec n T0 Ts => twfb n k && twfb T0 k && twfb Ts (S k)
+  | err T => twfb T k
+  | ite t1 t2 t3 => twfb t1 k && twfb t2 k && twfb t3 k
+  | tmatch t' t1 t2 => twfb t' k && twfb t1 k && twfb t2 k
+  | lambda T t' | tfix T t' => twfb T k && twfb t' k
+  | notype_lambda t' | succ t' | notype_tfix t' => twfb t' k
+  | tlet t1 T t2 => twfb t1 k && twfb T k && twfb t2 k
+  | type_abs t0 => twfb t0 (S k)
+  | tfold T t0 => twfb T k && twfb t0 k
+  | tsize t0 | pi1 t0 | pi2 t0 | boolean_recognizer _ t0 | unary_primitive _ t0 | tunfold t0 |
+    tright t0 | tleft t0 => twfb t0 k
+  | sum_match t' tl tr => twfb t' k && twfb tl k && twfb tr k
+  | type_inst t0 T | typecheck t0 T => twfb t0 k && twfb T k
+  | T_equiv t1 t2 | app t1 t2 | forall_inst t1 t2 | pp t1 t2 | because t1 t2 | get_refinement_witness t1 t2 |
+    binary_primitive _ t1 t2 | notype_tlet t1 t2 | tunfold_in t1 t2 | tunfold_pos_in t1 t2 |
+    trefl t1 t2 => twfb t1 k && twfb t2 k
+  | _ => true
+  end.
+
+Lemma twfb_prop: forall t k, (twfb t k = true) <-> (twf t k).
+Proof.
+  induction t;
+    (repeat bools || steps || rewrite PeanoNat.Nat.ltb_lt in * || rewrite PeanoNat.Nat.leb_le in * || lia || eauto with eapply_any).
+Qed.
+
+Hint Rewrite wfb_prop wfsb_prop twfb_prop: deriv.
+
 
 (* Erase term *)
 Fixpoint is_erased_termb (t : tree) : bool :=

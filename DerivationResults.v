@@ -244,16 +244,22 @@ Proof.
         let Γ' := fresh Γ2 in
         let fH := fresh H in
         rewrite refinementUnfoldInContext_prop in H; destruct H as [Γ [Γ' [H fH] ] ]; subst;
-          eapply annotated_reducible_equivalent_fold_refine; eauto; rewrite support_append in *;
-            rewrite fv_context_append in *;
-            repeat list_utils || steps
+        eapply annotated_reducible_equivalent_fold_refine; eauto; rewrite support_append in *;
+        rewrite fv_context_append in *;
+        repeat list_utils || steps
     | H: [[?Θ;?Γ ⊨ ?t1 ≡ zero]], H1: [[_;_ ⊨ ?t0: (T_rec ?t1 ?T ?t3_3)]] |- [[_;_⊨ (tunfold ?t0):?T]] =>
       apply (annotated_reducible_unfold_z Θ Γ t0 t1 T t3_3); eauto
     | H: [[?Θ;?Γ ⊨ _ ≡ ttrue]], H1: [[_;_ ⊨ ?t0: (T_rec _ _ _)]] |- [[_;_⊨ (tunfold ?t0) : ?T]] =>
       eapply annotated_reducible_unfold_s; eauto
     | H1: [[_;_ ⊨ ?t1 : (T_rec ?n ?T0 ?Ts)]], H2:[[_;((?p2, _)::(?p1, _)::(?y,_)::_) ⊨ _: ?T ]] |- [[_;_⊨ (tunfold_in _ _ ) : _]] =>
       eapply (annotated_reducible_unfold_in _ _ _ _ n T0 Ts p1 p2 y _); eauto
-      end; soundness_finish; eauto with deriv annotated_primitives].
+    | H: [[_;_ ⊨ ?t1 : (T_rec ?n ?T0 ?Ts)]], H1: [[_;((?p1,_)::(?y,_)::_) ⊨ _ : _ ]]
+      |- [[ _;_ ⊨ tunfold_pos_in ?t1 ?t2 : ?T]] =>
+      eapply (annnotated_reducible_unfold_pos_in _ _ t1 t2 n T0 Ts p1 y _); eauto
+    | H :[[_ ; ((?p,_)::(?pn,_)::_) ⊨_:_]]  |- [[_;_⊨ tfold _ _ : _]] =>
+      eapply (annnotated_reducible_fold _ _ _ _ pn _ _ p); eauto
+      end;
+    soundness_finish; eauto with deriv annotated_primitives].
   assert (is_valid (N (EJ E_SMT Θ Same t T) c) Γ = true).
   cbn; repeat bools || steps || autorewrite with deriv; eauto.
   eauto using trustSMTSolver_ADMITTED.

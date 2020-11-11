@@ -355,6 +355,53 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     && (y ?∉ fv_n) && (y ?∉ fv_T0) && (y ?∉ fv_Ts) && (y ?∉ fv_T)
     && NoDupb (p1::p2::y::nil)
 
+  | N (TJ J_Unfold_pos_in Θ _ (tunfold_pos_in t1 t2) T)
+      (( N ((TJ I1 _ _ _ (T_rec n T0 Ts)) as j1 ) _ as d1)
+         :: (N ((EJ I2 _ _ _ _) as j2) _ as d2)
+         :: (N ((TJ I3 _ (Append ((p1, _)::(y,_)::nil)) _ _) as j3) _ as d3) :: nil) =>
+    let T1 := (T_equiv t1 (tfold (T_rec n T0 Ts) (fvar y term_var))) in
+    let Ty := (topen 0 Ts (T_rec (tpred n) T0 Ts)) in
+    let fv_t1 := (fv t1) in let fv_t2 := (fv t2) in
+    let fv_n  := (fv n)  in let fv_T0 := (fv T0) in
+    let fv_Ts := (fv Ts) in let fv_T  := (fv T)  in
+    let fv_Γ  := (fv_context Γ) in
+    let support_Γ := (support Γ) in
+    (j1 ?= (TJ I1 Θ Same t1 (T_rec n T0 Ts))) && (is_valid d1 Γ)
+    && (j2 ?= (EJ I2 Θ Same (binary_primitive Lt zero n) ttrue)) && (is_valid d2 Γ)
+    && (j3 ?= (TJ I3 Θ (Append ((p1, T1)::(y, Ty)::nil)) (open 0 t2 (fvar y term_var)) T))
+    && (is_valid d3 ((p1,T1)::(y,Ty)::Γ))
+    && (fv_t1 ?⊂ support_Γ) && (fv_t2 ?⊂ support_Γ) && (fv_n ?⊂ support_Γ)
+    && (fv_T0 ?⊂ support_Γ) && (fv_Ts ?⊂ support_Γ)
+    && (wfb n 0) && (wfb T 0) && (wfb T0 0) && (wfb Ts 0)
+    && (wfb t1 0) && (wfb (erase_term t2) 0) && (twfb T0 0) && (twfb Ts 1)
+    && (is_annotated_termb n) && (is_annotated_termb t2) && (is_annotated_typeb T0) && (is_annotated_typeb Ts)
+    && (p1 ?∉ Θ) && (p1 ?∉ fv_Γ) && (p1 ?∉ fv_t1) && (p1 ?∉ fv_t2)
+    && (p1 ?∉ fv_n) && (p1 ?∉ fv_T0) && (p1 ?∉ fv_Ts) && (p1 ?∉ fv_T)
+    && (y ?∉ Θ) && (y ?∉ fv_Γ) && (y ?∉ fv_t1) && (y ?∉ fv_t2)
+    && (y ?∉ fv_n) && (y ?∉ fv_T0) && (y ?∉ fv_Ts) && (y ?∉ fv_T)
+    && NoDupb (p1::y::nil)
+
+  | N (TJ J_Fold Θ _ (tfold (T_rec n T0 Ts) t) T)
+      (( N ((TJ I1 _ _ _ _) as j1) _ as d1)
+         :: (N ((TJ I2 _ (Append [(p, _)]) _ _) as j2) _ as d2)
+         :: (N ((TJ I3 _ (Append [(_,_);(pn,_)]) _ _) as j3) _ as d3)::nil) =>
+    let fv_n  := (fv n)  in let fv_T0 := (fv T0) in
+    let fv_Ts := (fv Ts) in let fv_t  := (fv t) in
+    let fv_Γ  := (fv_context Γ) in
+    let support_Γ := (support Γ) in
+    (j1 ?= (TJ I1 Θ Same n T_nat)) && (is_valid d1 Γ)
+    && (j2 ?= (TJ I2 Θ (Append [(p, T_equiv n zero)]) t T0)) && (is_valid d2 ((p, T_equiv n zero)::Γ))
+    && (j3 ?= (TJ I3 Θ (Append [(p, T_equiv n (succ (fvar pn term_var))); (pn, T_nat)]) t (topen 0 Ts (T_rec (fvar pn term_var) T0 Ts))))
+    && (is_valid d3 ((p, T_equiv n (succ (fvar pn term_var)))::(pn, T_nat)::Γ))
+    && (tree_eq T (T_rec n T0 Ts))
+    && (is_annotated_termb n) && (is_annotated_typeb T0) && (is_annotated_typeb Ts)
+    && (fv_n ?⊂ support_Γ) && (fv_T0 ?⊂ support_Γ) && (fv_Ts ?⊂ support_Γ)
+    && (wfb n 0) && (twfb n 0) && (wfb T0 0) && (twfb T0 0)
+    && (wfb Ts 0) && (twfb Ts 1) && (p ?<> pn)
+    && (p ?∉ Θ) && (p ?∉ fv_Γ) && (p ?∉ fv_n) && (p ?∉ fv_T0) && (p ?∉ fv_Ts) && (p ?∉ fv_t)
+    && (pn ?∉ Θ) && (pn ?∉ fv_Γ) && (pn ?∉ fv_n) && (pn ?∉ fv_T0) && (pn ?∉ fv_Ts) && (pn ?∉ fv_t)
+
+
 
   (* EQUIVALENCE JUDGMENTS *)
   (* Symetric *)

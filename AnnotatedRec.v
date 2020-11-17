@@ -3,6 +3,9 @@ Require Import Coq.Lists.List.
 Require Export SystemFR.ErasedRec.
 Require Export SystemFR.AnnotatedTactics.
 Require Export SystemFR.Judgments.
+Require Export SystemFR.AnnotatedSubtypeRec.
+Require Export SystemFR.AnnotatedSub.
+Require Export SystemFR.AnnotatedEquivalent.
 
 Opaque reducible_values.
 
@@ -204,4 +207,17 @@ Proof.
   apply open_reducible_fold2 with p pn;
     repeat step;
     side_conditions.
+Qed.
+
+Lemma annotated_reducible_fold2:
+  forall Θ Γ t n1 n2 T0 Ts T2,
+    (drop_refinement T2) = T_rec n2 T0 Ts ->
+    [[ Θ; Γ ⊨ n1 ≡ n2]] ->
+    [[ Θ; Γ ⊨ t : T2 ]] ->
+    [[ Θ; Γ ⊨ t : T_rec n1 T0 Ts ]].
+Proof.
+  intros.
+  eapply annotated_reducible_sub;
+    eauto using annotated_equivalent_sym, annotated_subtype_rec, annotated_reducible_drop.
+  eapply_anywhere annotated_reducible_drop; rewrite_any; steps.
 Qed.

@@ -401,7 +401,12 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     && (p ?∉ Θ) && (p ?∉ fv_Γ) && (p ?∉ fv_n) && (p ?∉ fv_T0) && (p ?∉ fv_Ts) && (p ?∉ fv_t)
     && (pn ?∉ Θ) && (pn ?∉ fv_Γ) && (pn ?∉ fv_n) && (pn ?∉ fv_T0) && (pn ?∉ fv_Ts) && (pn ?∉ fv_t)
 
-
+  | N (TJ J_Fold2 Θ _ t (T_rec n1 T0 Ts))
+      (( N ((TJ I1 _ _ _ T2) as j1) _ as d1)
+         :: (N ((EJ I2 _ _ _ n2) as j2) _ as d2) :: nil) =>
+    (j1 ?= (TJ I1 Θ Same t T2)) && (is_valid d1 Γ)
+    && (j2 ?= (EJ I2 Θ Same n1 n2)) && (is_valid d2 Γ)
+    && (tree_eq (drop_refinement T2) (T_rec n2 T0 Ts))
 
   (* EQUIVALENCE JUDGMENTS *)
   (* Symetric *)

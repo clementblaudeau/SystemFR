@@ -47,6 +47,7 @@ Hint Resolve annotated_reducible_unit: deriv.
 Hint Rewrite tree_eq_prop: deriv.
 Hint Resolve annotated_reducible_top: deriv.
 Hint Resolve annotated_reducible_top_value: deriv.
+Hint Resolve annotated_reducible_fold2: deriv.
 Hint Rewrite is_nat_is_nat_value: deriv.
 
 (* Judgments *)
@@ -79,7 +80,8 @@ Inductive TJ_name :=
 | J_Unfold_s
 | J_Unfold_in
 | J_Unfold_pos_in
-| J_Fold.
+| J_Fold
+| J_Fold2.
 
 
 Inductive StJ_name :=

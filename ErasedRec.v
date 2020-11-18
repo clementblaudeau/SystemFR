@@ -478,6 +478,78 @@ Proof.
       eauto with twf.
 Qed.
 
+
+Lemma open_reducible_fold3:
+  forall Θ Γ t n T0 Ts p pn,
+    wf T0 0 ->
+    twf T0 0 ->
+    wf Ts 0 ->
+    twf Ts 1 ->
+    is_erased_type T0 ->
+    is_erased_type Ts ->
+    ~(p ∈ pfv n term_var) ->
+    ~(p ∈ pfv_context Γ term_var) ->
+    ~(p ∈ pfv t term_var) ->
+    ~(p ∈ pfv T0 term_var) ->
+    ~(p ∈ pfv Ts term_var) ->
+    ~(pn ∈ pfv n term_var) ->
+    ~(pn ∈ pfv_context Γ term_var) ->
+    ~(pn ∈ pfv t term_var) ->
+    ~(pn ∈ pfv T0 term_var) ->
+    ~(pn ∈ pfv Ts term_var) ->
+    ~(p = pn) ->
+    subset (fv T0) (support Γ) ->
+    subset (fv Ts) (support Γ) ->
+    [ Θ; Γ ⊨ n : T_nat ] ->
+    [ Θ; (p, T_equiv n zero) :: Γ ⊨ t : T0 ] ->
+    [ Θ; (p, T_equiv n (binary_primitive Plus (fvar pn term_var) (succ zero))) :: (pn, T_nat) :: Γ ⊨
+        t : topen 0 Ts (T_rec (fvar pn term_var) T0 Ts) ] ->
+    [ Θ; Γ ⊨ t : T_rec n T0 Ts ].
+Proof.
+
+  unfold open_reducible;
+    repeat step || t_instantiate_sat3.
+
+  unfold reduces_to in H23; repeat step || simp_red.
+
+  t_invert_nat_value; steps.
+
+  - apply reducible_rec_equivalent with zero; t_closing;
+      eauto using equivalent_sym, equivalent_star.
+    apply reducible_fold_zero; steps; eauto with wf twf erased.
+    unshelve epose proof (H19 ρ ((p, uu) :: lterms) _ _ _);
+      repeat step || list_utils || apply SatCons || simp_red || t_substitutions ||
+             step_inversion NoDup || rewrite substitute_open in * || apply_any;
+      eauto using equivalent_star;
+      t_closer;
+      eauto with twf.
+
+  - apply reducible_rec_equivalent with (succ v0); steps;
+      try solve [ apply equivalent_sym, equivalent_star; t_closing ].
+
+    apply reducible_fold; steps;
+      eauto with wf;
+      eauto with fv;
+      eauto 3 with twf;
+      eauto with erased;
+      eauto using equivalent_sym, equivalent_star;
+      try solve [ unfold reduces_to; repeat step || simp_red || eexists; try t_closing; eauto with smallstep ].
+
+    unshelve epose proof (H20 ρ ((p, uu) :: (pn, v0) :: lterms) _ _ _);
+      repeat step || list_utils || nodup || apply SatCons || simp_red || t_substitutions ||
+             rewrite substitute_open in *;
+      try solve [ apply equivalent_star; t_closing ];
+      t_closer;
+      eauto with twf.
+    repeat is_nat_value_buildable || steps.
+    eapply equivalent_trans; [| eapply equivalent_sym]; equivalent_star.
+    assert (succ zero = build_nat 1) by steps; rewrite_any.
+    assert (succ (build_nat n0) = build_nat (n0 + 1)) by (rewrite PeanoNat.Nat.add_1_r; steps); rewrite_any.
+    apply star_one, SPBetaPlus; step.
+Qed.
+
+
+
 Lemma reducible_unfold_in:
   forall t1 t2 T n T0 Ts ρ,
    [ ρ ⊨ t1 : T_rec n T0 Ts ] ->

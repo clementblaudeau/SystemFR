@@ -221,3 +221,43 @@ Proof.
     eauto using annotated_equivalent_sym, annotated_subtype_rec, annotated_reducible_drop.
   eapply_anywhere annotated_reducible_drop; rewrite_any; steps.
 Qed.
+
+Lemma annotated_reducible_fold3:
+  forall Θ Γ t n pn T0 Ts p,
+    ~(p ∈ Θ) ->
+    ~(p ∈ fv_context Γ) ->
+    ~(p ∈ fv t) ->
+    ~(p ∈ fv n) ->
+    ~(p ∈ fv T0) ->
+    ~(p ∈ fv Ts) ->
+    ~(pn ∈ Θ) ->
+    ~(pn ∈ fv_context Γ) ->
+    ~(pn ∈ fv t) ->
+    ~(pn ∈ fv n) ->
+    ~(pn ∈ fv T0) ->
+    ~(pn ∈ fv Ts) ->
+    ~(p = pn) ->
+    wf n 0 ->
+    twf n 0 ->
+    wf T0 0 ->
+    twf T0 0 ->
+    wf Ts 0 ->
+    twf Ts 1 ->
+    subset (fv n) (support Γ) ->
+    subset (fv T0) (support Γ) ->
+    subset (fv Ts) (support Γ) ->
+    is_annotated_term n ->
+    is_annotated_type T0 ->
+    is_annotated_type Ts ->
+    [[ Θ; Γ ⊨ n : T_nat ]] ->
+    [[ Θ; (p, T_equiv n zero) :: Γ ⊨ t : T0 ]] ->
+    [[ Θ; (p, T_equiv n (binary_primitive Plus (fvar pn term_var) (succ zero))) :: (pn, T_nat) :: Γ ⊨ t : topen 0 Ts (T_rec (fvar pn term_var) T0 Ts) ]] ->
+    [[ Θ; Γ ⊨ tfold (T_rec n T0 Ts) t : T_rec n T0 Ts ]].
+Proof.
+  unfold open_equivalent;
+    repeat step || erase_open.
+
+  apply open_reducible_fold3 with p pn;
+    repeat step;
+    side_conditions.
+Qed.

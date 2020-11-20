@@ -35,9 +35,17 @@ Qed.
 
 Lemma open_reducible_top_value:
   forall tvars gamma t,
-    (closed_value t) ->
+    (cbv_value t) ->
+    subset (fv t) (support gamma) ->
+    wf t 0 ->
+    is_erased_term t ->
     [ tvars; gamma ⊨ t : T_top ].
 Proof.
   unfold open_reducible, reduces_to.
-  repeat steps || simp_red || exists t || t_closer || rewrite substitute_nothing5 ; eauto with fv wf erased.
+  intros. split.
+  + repeat steps || simp_red || t_closer.
+  + exists (substitute t lterms). split; [|apply Operators_Properties.clos_rt_rt1n; steps].
+    cbn. rewrite reducible_values_equation_14.
+    steps. unfold closed_value, closed_term; steps; eauto with fv wf values erased.
+    induction H; repeat steps || list_utils ; eauto with values sets.
 Qed.

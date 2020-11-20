@@ -306,7 +306,8 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     (j1 ?= (TJ I1 Θ Same t T)) && (is_valid d1 Γ)
 
   | N (TJ J_Top_value Θ _ t T_top) nil =>
-    (closed_valueb t) && (is_annotated_termb t)
+    let erased_t := erase_term t in
+    (is_value erased_t) && (is_annotated_termb t) && (wfb t 0) && ((fv t) ?⊂ (support Γ))
 
   (* Fold rules *)
   | N (TJ J_Unfold_z Θ _ (tunfold t) T0)
@@ -383,22 +384,23 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
 
   | N (TJ J_Fold Θ _ (tfold (T_rec n T0 Ts) t) T)
       (( N ((TJ I1 _ _ _ _) as j1) _ as d1)
-         :: (N ((TJ I2 _ (Append [(p, _)]) _ _) as j2) _ as d2)
-         :: (N ((TJ I3 _ (Append [(_,_);(pn,_)]) _ _) as j3) _ as d3)::nil) =>
+         :: (N ((TJ I2 _ (Append [(p1, _)]) _ _) as j2) _ as d2)
+         :: (N ((TJ I3 _ (Append [(p2, _);(pn,_)]) _ _) as j3) _ as d3)::nil) =>
     let fv_n  := (fv n)  in let fv_T0 := (fv T0) in
     let fv_Ts := (fv Ts) in let fv_t  := (fv t) in
     let fv_Γ  := (fv_context Γ) in
     let support_Γ := (support Γ) in
     (j1 ?= (TJ I1 Θ Same n T_nat)) && (is_valid d1 Γ)
-    && (j2 ?= (TJ I2 Θ (Append [(p, T_equiv n zero)]) t T0)) && (is_valid d2 ((p, T_equiv n zero)::Γ))
-    && (j3 ?= (TJ I3 Θ (Append [(p, T_equiv n (succ (fvar pn term_var))); (pn, T_nat)]) t (topen 0 Ts (T_rec (fvar pn term_var) T0 Ts))))
-    && (is_valid d3 ((p, T_equiv n (succ (fvar pn term_var)))::(pn, T_nat)::Γ))
+    && (j2 ?= (TJ I2 Θ (Append [(p1, T_equiv n zero)]) t T0)) && (is_valid d2 ((p1, T_equiv n zero)::Γ))
+    && (j3 ?= (TJ I3 Θ (Append [(p2, T_equiv n (binary_primitive Plus (fvar pn term_var) (succ zero))); (pn, T_nat)]) t (topen 0 Ts (T_rec (fvar pn term_var) T0 Ts))))
+    && (is_valid d3 ((p2, T_equiv n (binary_primitive Plus (fvar pn term_var) (succ zero)))::(pn, T_nat)::Γ))
     && (tree_eq T (T_rec n T0 Ts))
     && (is_annotated_termb n) && (is_annotated_typeb T0) && (is_annotated_typeb Ts)
     && (fv_n ?⊂ support_Γ) && (fv_T0 ?⊂ support_Γ) && (fv_Ts ?⊂ support_Γ)
     && (wfb n 0) && (twfb n 0) && (wfb T0 0) && (twfb T0 0)
-    && (wfb Ts 0) && (twfb Ts 1) && (p ?<> pn)
-    && (p ?∉ Θ) && (p ?∉ fv_Γ) && (p ?∉ fv_n) && (p ?∉ fv_T0) && (p ?∉ fv_Ts) && (p ?∉ fv_t)
+    && (wfb Ts 0) && (twfb Ts 1) && (p2 ?<> pn)
+    && (p1 ?∉ Θ) && (p1 ?∉ fv_Γ) && (p1 ?∉ fv_n) && (p1 ?∉ fv_T0) && (p1 ?∉ fv_t)
+    && (p2 ?∉ Θ) && (p2 ?∉ fv_Γ) && (p2 ?∉ fv_n) && (p2 ?∉ fv_T0) && (p2 ?∉ fv_Ts) && (p2 ?∉ fv_t)
     && (pn ?∉ Θ) && (pn ?∉ fv_Γ) && (pn ?∉ fv_n) && (pn ?∉ fv_T0) && (pn ?∉ fv_Ts) && (pn ?∉ fv_t)
 
   | N (TJ J_Fold2 Θ _ t (T_rec n1 T0 Ts))

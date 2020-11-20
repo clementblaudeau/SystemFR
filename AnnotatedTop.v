@@ -12,14 +12,12 @@ Qed.
 Lemma annotated_reducible_top_value:
   forall Θ Γ t,
     (is_annotated_term t) ->
-    (closed_value t) ->
+    (cbv_value (erase_term t)) ->
+    subset (fv t) (support Γ) ->
+    wf t 0 ->
     [[ Θ; Γ ⊨ t : T_top ]].
 Proof.
-  repeat steps ||
-         (unfold annotated_reducible in *) ||
-          (unfold closed_value in *) ||
-           (unfold closed_term in * )
-           || apply open_reducible_top_value
-           || rewrite erase_erased_annotated_term;
-           eauto with erased.
-           Qed.
+  repeat steps || apply open_reducible_top_value ; steps; eauto with erased wf fv values.
+  rewrite pfv_erase_context_subst2.
+  eauto using subset_transitive, pfv_erase_term_subst.
+Qed.

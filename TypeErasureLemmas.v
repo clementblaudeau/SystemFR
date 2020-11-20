@@ -139,6 +139,13 @@ Proof.
   unfold subset; steps; eauto with fv.
 Qed.
 
+Lemma pfv_erase_context_subst2:
+  forall Γ,
+    support (erase_context Γ) = support Γ.
+Proof.
+  induction Γ; steps.
+Qed.
+
 Lemma pfv_erase_term_subst:
   forall S t tag,
     subset (pfv t tag) S ->
@@ -214,3 +221,14 @@ Lemma erase_erased_annotated_term:
 Proof.
   induction t; steps.
 Qed.
+
+
+Lemma erase_cbv_value:
+  forall v,
+    cbv_value v ->
+    cbv_value (erase_term v).
+Proof.
+  induction 1; steps; eauto with values.
+Qed.
+
+Hint Resolve erase_cbv_value: values.

@@ -223,20 +223,25 @@ Proof.
 Qed.
 
 Lemma annotated_reducible_fold3:
-  forall Θ Γ t n pn T0 Ts p,
-    ~(p ∈ Θ) ->
-    ~(p ∈ fv_context Γ) ->
-    ~(p ∈ fv t) ->
-    ~(p ∈ fv n) ->
-    ~(p ∈ fv T0) ->
-    ~(p ∈ fv Ts) ->
+  forall Θ Γ t n pn T0 Ts p1 p2,
+    ~(p1 ∈ Θ) ->
+    ~(p1 ∈ fv_context Γ) ->
+    ~(p1 ∈ fv t) ->
+    ~(p1 ∈ fv n) ->
+    ~(p1 ∈ fv T0) ->
+    ~(p2 ∈ Θ) ->
+    ~(p2 ∈ fv_context Γ) ->
+    ~(p2 ∈ fv t) ->
+    ~(p2 ∈ fv n) ->
+    ~(p2 ∈ fv T0) ->
+    ~(p2 ∈ fv Ts) ->
     ~(pn ∈ Θ) ->
     ~(pn ∈ fv_context Γ) ->
     ~(pn ∈ fv t) ->
     ~(pn ∈ fv n) ->
     ~(pn ∈ fv T0) ->
     ~(pn ∈ fv Ts) ->
-    ~(p = pn) ->
+    ~(p2 = pn) ->
     wf n 0 ->
     twf n 0 ->
     wf T0 0 ->
@@ -250,14 +255,14 @@ Lemma annotated_reducible_fold3:
     is_annotated_type T0 ->
     is_annotated_type Ts ->
     [[ Θ; Γ ⊨ n : T_nat ]] ->
-    [[ Θ; (p, T_equiv n zero) :: Γ ⊨ t : T0 ]] ->
-    [[ Θ; (p, T_equiv n (binary_primitive Plus (fvar pn term_var) (succ zero))) :: (pn, T_nat) :: Γ ⊨ t : topen 0 Ts (T_rec (fvar pn term_var) T0 Ts) ]] ->
+    [[ Θ; (p1, T_equiv n zero) :: Γ ⊨ t : T0 ]] ->
+    [[ Θ; (p2, T_equiv n (binary_primitive Plus (fvar pn term_var) (succ zero))) :: (pn, T_nat) :: Γ ⊨ t : topen 0 Ts (T_rec (fvar pn term_var) T0 Ts) ]] ->
     [[ Θ; Γ ⊨ tfold (T_rec n T0 Ts) t : T_rec n T0 Ts ]].
 Proof.
   unfold open_equivalent;
     repeat step || erase_open.
 
-  apply open_reducible_fold3 with p pn;
+  apply open_reducible_fold3 with p1 p2 pn;
     repeat step;
     side_conditions.
 Qed.

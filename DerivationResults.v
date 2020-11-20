@@ -24,17 +24,24 @@ Ltac destruct_clear t H := destruct t; try apply (ex_falso_quolibet _ H).
 
 Hint Unfold closed_value: deriv.
 
+Ltac drop_refinement_wf :=
+  match goal with
+  | H1: wf ?T ?k, H: drop_refinement ?T = _ |- _ =>
+    pose proof drop_refinement_wf T k H1;
+    clear H1;
+    rewrite_anywhere H
+  end.
+
 Lemma is_valid_wf_aux: forall dv Γ, is_valid dv Γ = true -> wf (J_term1 (root dv)) 0 /\ wf (J_term2 (root dv)) 0.
 Proof.
   induction dv using derivation_ind.
   intros. unfold root, J_term1, J_term2. unfold forallP in X.
   all: cbn in H; repeat (destruct_match;  try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
-  all: repeat subst || light_bool || match goal with | H: wf (_ _) _ |- _ => simpl in H end || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens_is_valid || unfold closed_value, closed_term in * ; simpl.
+  all: repeat subst || light_bool || match goal with | H: wf (_ _) _ |- _ => simpl in H end || rewrite_deriv || invert_constructor_equalities || inst_list_prop || modus_ponens_is_valid || unfold closed_value, closed_term in * || drop_refinement_wf; simpl.
   all: repeat split || reflexivity.
   all: try (eapply wf_topen; simpl; repeat split); eauto using wf_open_rev with wf deriv.
 Qed.
-
 
 Lemma is_valid_support_term_aux :
   forall dv Γ, is_valid dv Γ = true ->
@@ -81,6 +88,8 @@ Proof.
                 |- subset (pfv ?t term_var) ?A  => apply (subset_open_open k1 k2 t n3 n2 n1 A H H1 H2 H3)
               (* | H:_|- subset (pfv (topen _ _ _) _) _ => eapply subset_transitive; try eapply fv_topen *)
               | H: subset( fv (_ _ _)) _ |- _ => cbn in H
+              | H: drop_refinement ?T = _ |- _ =>
+                pose proof (drop_refinement_pfv_subset T term_var); rewrite_anywhere H; clear H
               end
        || invert_constructor_equalities || apply support_open2 || simpl || split || rewrite_any || unfold closed_value, closed_term in *.
   all: eauto using singleton_subset, inList1, inList2, inList3, refinementUnfoldInContext_support3, fv_topen, subset_transitive, subset_union2, subset_nil, drop_refinement_pfv_subset .
@@ -256,10 +265,9 @@ Proof.
     | H: [[_;_ ⊨ ?t1 : (T_rec ?n ?T0 ?Ts)]], H1: [[_;((?p1,_)::(?y,_)::_) ⊨ _ : _ ]]
       |- [[ _;_ ⊨ tunfold_pos_in ?t1 ?t2 : ?T]] =>
       eapply (annnotated_reducible_unfold_pos_in _ _ t1 t2 n T0 Ts p1 y _); eauto
-    | H :[[_ ; ((?p,_)::(?pn,_)::_) ⊨_:_]]  |- [[_;_⊨ tfold _ _ : _]] =>
-      eapply (annnotated_reducible_fold _ _ _ _ pn _ _ p); eauto
       end;
     soundness_finish; eauto with deriv annotated_primitives].
+  eauto with deriv.
   assert (is_valid (N (EJ E_SMT Θ Same t T) c) Γ = true).
   cbn; repeat bools || steps || autorewrite with deriv; eauto.
   eauto using trustSMTSolver_ADMITTED.

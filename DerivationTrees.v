@@ -48,6 +48,7 @@ Hint Rewrite tree_eq_prop: deriv.
 Hint Resolve annotated_reducible_top: deriv.
 Hint Resolve annotated_reducible_top_value: deriv.
 Hint Resolve annotated_reducible_fold2: deriv.
+Hint Resolve annotated_reducible_fold3: deriv.
 Hint Rewrite is_nat_is_nat_value: deriv.
 
 (* Judgments *)

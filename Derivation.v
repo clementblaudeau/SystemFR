@@ -410,6 +410,25 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     && (j2 ?= (EJ I2 Θ Same n1 n2)) && (is_valid d2 Γ)
     && (tree_eq (drop_refinement T2) (T_rec n2 T0 Ts))
 
+
+  (* Polymorphism *)
+  | N (TJ J_type_app Θ _ (type_inst t V) T)
+      (( N ((TJ I1 _ _ _ (T_abs U)) as j1) _ as d1) :: nil) =>
+    (j1 ?= (TJ I1 Θ Same t (T_abs U))) && (is_valid d1 Γ)
+    && (tree_eq T (topen 0 U V))
+    && ((fv U) ?⊂ (support Γ)) && ((fv V) ?⊂ (support Γ))
+    && (wfb U 0) && (wfb V 0) && (twfb V 0)
+    && (is_annotated_typeb U) && (is_annotated_typeb V)
+
+  | N (TJ J_type_abs Θ _ (type_abs t) (T_abs T))
+      (( N ((TJ I1 (X::_) _ _ _) as j1) _ as d1) :: nil) =>
+    (j1 ?= (TJ I1 (X::Θ) Same (topen 0 t (fvar X type_var)) (topen 0 T (fvar X type_var)))) && (is_valid d1 Γ)
+     && (X ?∉ (pfv_context Γ term_var)) && (X ?∉ (pfv_context Γ type_var))
+     && (X ?∉ (pfv t term_var)) && (X ?∉ (pfv T term_var)) && (X ?∉ (pfv T type_var)) && (X ?∉ Θ)
+     && ((fv t) ?⊂ (support Γ)) && ((fv T) ?⊂ (support Γ))
+     && (is_annotated_typeb T) && (is_annotated_termb t) && (wfb t 0) && (twfb t 1) && (twfb T 1)
+
+
   (* EQUIVALENCE JUDGMENTS *)
   (* Symetric *)
   | N (EJ E_sym Θ _ t1 t2)

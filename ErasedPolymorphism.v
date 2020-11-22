@@ -15,8 +15,7 @@ Lemma reducible_type_abs:
   forall ρ t T X,
     fv t = nil ->
     fv T = nil ->
-    wf t 0 ->
-    wf T 1 ->
+    twf T 1 ->
     is_erased_term t ->
     valid_interpretation ρ ->
     (X ∈ pfv T type_var -> False) ->
@@ -27,7 +26,7 @@ Lemma reducible_type_abs:
    [ ρ ⊨ t : T_abs T ].
 Proof.
   intros.
-  unshelve epose proof (H7 (fun _ => False) _); steps; eauto using reducibility_candidate_empty; t_closing.
+  unshelve epose proof (H6 (fun _ => False) _); steps; eauto using reducibility_candidate_empty; t_closing.
 
   unfold reduces_to in *; repeat step || simp_red; t_closing.
   exists v; repeat step || simp_red; t_closing;
@@ -41,8 +40,8 @@ Lemma open_reducible_type_abs:
   forall Θ Γ t T (X : nat),
     subset (pfv t term_var) (support Γ) ->
     subset (pfv T term_var) (support Γ) ->
+    twf T 1 ->
     wf t 0 ->
-    wf T 1 ->
     (X ∈ pfv_context Γ term_var -> False) ->
     (X ∈ pfv_context Γ type_var -> False) ->
     (X ∈ pfv t term_var -> False) ->
@@ -53,13 +52,14 @@ Lemma open_reducible_type_abs:
     [ X :: Θ; Γ ⊨ t : topen 0 T (fvar X type_var) ] ->
     [ Θ; Γ ⊨ t : T_abs T ].
 Proof.
-  unfold open_reducible; repeat step || t_termlist.
+  unfold open_reducible ; repeat step || t_termlist; t_closing.
 
   apply reducible_type_abs with X;
     repeat step || rewrite fv_subst_different_tag in * by (steps; eauto with fv);
       eauto with wf;
       eauto with fv;
-      eauto with erased.
+      eauto with erased;
+      eauto using satisfies_twfs, twf_subst.
 
   match goal with
   | H: forall _ _, _ |- _ =>

@@ -14,18 +14,17 @@ Lemma annotated_reducible_type_abs:
     subset (fv t) (support Γ) ->
     subset (fv T) (support Γ) ->
     wf t 0 ->
-    wf T 1 ->
-    twf t 0 ->
+    twf t 1 ->
+    twf T 1 ->
+    is_annotated_term t ->
     is_annotated_type T ->
     [[ X :: Θ; Γ ⊨ topen 0 t (fvar X type_var) : topen 0 T (fvar X type_var) ]] ->
     [[ Θ; Γ ⊨ type_abs t : T_abs T ]].
 Proof.
-  intros.
-  apply open_reducible_type_abs with X;
-    repeat step ||
-           (rewrite erase_type_topen in * by steps) ||
-           (rewrite topen_none in * by auto);
-    side_conditions.
+  intros. steps.
+  apply open_reducible_type_abs with X; side_conditions;
+  rewrite erase_type_topen in * by steps;
+  rewrite erase_term_topen in *; steps.
 Qed.
 
 Lemma annotated_reducible_type_inst:

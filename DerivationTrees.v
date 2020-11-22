@@ -22,6 +22,8 @@ Require Export SystemFR.AnnotatedQuant.
 Require Export SystemFR.DerivationHelpers.
 Require Export SystemFR.AnnotatedTop.
 Require Export SystemFR.AnnotatedRec.
+Require Export SystemFR.AnnotatedPolymorphism.
+
 Require Import Psatz.
 
 
@@ -44,11 +46,14 @@ Hint Resolve annotated_reducible_let: deriv.
 Hint Resolve annotated_reducible_var: deriv.
 Hint Resolve annotated_reducible_weaken: deriv.
 Hint Resolve annotated_reducible_unit: deriv.
-Hint Rewrite tree_eq_prop: deriv.
 Hint Resolve annotated_reducible_top: deriv.
 Hint Resolve annotated_reducible_top_value: deriv.
 Hint Resolve annotated_reducible_fold2: deriv.
 Hint Resolve annotated_reducible_fold3: deriv.
+Hint Resolve annotated_reducible_type_inst: deriv.
+Hint Resolve annotated_reducible_type_abs: deriv.
+
+Hint Rewrite tree_eq_prop: deriv.
 Hint Rewrite is_nat_is_nat_value: deriv.
 
 (* Judgments *)
@@ -82,7 +87,9 @@ Inductive TJ_name :=
 | J_Unfold_in
 | J_Unfold_pos_in
 | J_Fold
-| J_Fold2.
+| J_Fold2
+| J_type_app
+| J_type_abs.
 
 
 Inductive StJ_name :=

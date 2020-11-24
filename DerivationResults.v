@@ -176,6 +176,7 @@ Proof.
   destruct J.
   all: pose proof (subset_context_support Γ).
   (* Finish pattern matching deconstruction *)
+  all: try discriminate.
   all: cbn in H; repeat (destruct_match; try apply (ex_falso_quolibet _ H)).
   (* Apply induction hypothesis and do the rewrites *)
   all: repeat destruct_andb.

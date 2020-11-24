@@ -2,6 +2,9 @@ Require Export SystemFR.Judgments.
 Require Export SystemFR.AnnotatedTactics.
 Require Export SystemFR.RedTactics.
 Require Export SystemFR.EquivalentContext.
+Require Export SystemFR.AnnotatedVar.
+Require Export SystemFR.AnnotatedEquivalentMisc.
+
 
 Lemma annotated_equivalence_context:
   forall Θ Γ C t1 t2,
@@ -18,6 +21,19 @@ Proof.
     eauto with erased;
     eauto with wf;
     eauto with fv.
+Qed.
+
+Lemma annotated_equivalence_context2:
+  forall Θ Γ C t1 t2 p,
+    wf C 1 ->
+    is_annotated_term C ->
+    subset (fv C) (support Γ) ->
+    is_annotated_term t1 ->
+    is_annotated_term t2 ->
+    lookup PeanoNat.Nat.eq_dec Γ p = Some (T_equiv t1 t2) ->
+    [[ Θ; Γ ⊨ open 0 C t1 ≡ open 0 C t2 ]].
+Proof.
+  eauto using annotated_equivalence_context, annotated_reducible_var, annotated_equivalent_type.
 Qed.
 
 Lemma annotated_equivalence_lambdas:

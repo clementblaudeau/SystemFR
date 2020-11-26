@@ -135,19 +135,29 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
       ((N ((TJ I1 _ Same _ _) as j) _ as d)::nil) =>
     (j ?= (TJ I1 Θ Same t B)) && (is_valid d Γ) && (wfb A 0) && ((fv A) ?⊂ (support Γ))
   (* Sum_match *)
+  | N (TJ J_SumType Θ _ t (T_sum T1 T2))
+      ((N ((TJ I1 _ _ _ _) as j1) _ as d1)::nil) =>
+    (j1 ?= (TJ I1 Θ Same (sum_match t (tleft (lvar 0 term_var)) (tright (lvar 0 term_var))) (T_sum T1 T2)))
+      && (is_valid d1 Γ)
   | N (TJ (J_SumMatch T) Θ _ (sum_match t tl tr) T')
       ((N ((TJ I1 _ Same _ (T_sum A B)) as j) _ as d)
-         :: (N ((TJ Il _ (Append [(p, _);(y, _)]) _ _) as jl) _ as dl)
-         :: (N ((TJ Ir _ _ _ _) as jr) _ as dr) :: nil) =>
+         :: (N ((TJ Il _ (Append [(p1, _);(y1, _)]) _ _) as jl) _ as dl)
+         :: (N ((TJ Ir _ (Append [(p2, _);(y2, _)]) _ _) as jr) _ as dr) :: nil) =>
+    let fv_A := (fv A) in let fv_B := (fv B) in
+    let fv_tl := (fv tl) in let fv_tr := (fv tr) in
+    let fv_t := (fv t) in let fv_T := (fv T) in
+    let support_Γ := (support Γ) in let fv_context_Γ := (fv_context Γ) in
        (j ?= (TJ I1 Θ Same t (T_sum A B))) && (is_valid d Γ)
-       && (jl ?= (TJ Il Θ (Append [(p, T_equiv t (tleft (fvar y term_var)));(y, A)]) (open 0 tl (fvar y term_var)) (open 0 T (tleft (fvar y term_var)))))
-       && (is_valid dl ((p, T_equiv t (tleft (fvar y term_var)))::(y, A)::Γ))
-       && (jr ?= (TJ Ir Θ (Append [(p, T_equiv t (tright (fvar y term_var)));(y, B)]) (open 0 tr (fvar y term_var)) (open 0 T (tright (fvar y term_var)))))
-       && (is_valid dr ((p, T_equiv t (tright (fvar y term_var)))::(y, B)::Γ))
+       && (jl ?= (TJ Il Θ (Append [(p1, T_equiv t (tleft (fvar y1 term_var)));(y1, A)]) (open 0 tl (fvar y1 term_var)) (open 0 T (tleft (fvar y1 term_var)))))
+       && (is_valid dl ((p1, T_equiv t (tleft (fvar y1 term_var)))::(y1, A)::Γ))
+       && (jr ?= (TJ Ir Θ (Append [(p2, T_equiv t (tright (fvar y2 term_var)));(y2, B)]) (open 0 tr (fvar y2 term_var)) (open 0 T (tright (fvar y2 term_var)))))
+       && (is_valid dr ((p2, T_equiv t (tright (fvar y2 term_var)))::(y2, B)::Γ))
        && (tree_eq T' (open 0 T t))
-       && (p ?∉ (fv tl)) && (p ?∉ (fv tr)) && (p ?∉ (fv t)) && (p ?∉ (fv T)) && (p ?∉ (fv A)) && (p ?∉ (fv B)) && (p ?∉ (fv_context Γ))
-       && (y ?∉ (fv tl)) && (y ?∉ (fv tr)) && (y ?∉ (fv t)) && (y ?∉ (fv T)) && (y ?∉ (fv A)) && (y ?∉ (fv B)) && (y ?∉ (fv_context Γ))
-       && (y ?<> p) && (y ?∉ Θ) && (p ?∉ Θ)
+       && (p1 ?∉ fv_tl) && (p1 ?∉ fv_t) && (p1 ?∉ fv_T) && (p1 ?∉ fv_A) && (p1 ?∉ fv_context_Γ) && (p1 ?∉ Θ)
+       && (p2 ?∉ fv_tr) && (p2 ?∉ fv_t) && (p2 ?∉ fv_T) && (p2 ?∉ fv_B) && (p2 ?∉ fv_context_Γ) && (p2 ?∉ Θ)
+       && (y1 ?∉ fv_tl) && (y1 ?∉ fv_t) && (y1 ?∉ fv_T) && (y1 ?∉ fv_A) && (y1 ?∉ fv_context_Γ) && (y1 ?∉ Θ)
+       && (y2 ?∉ fv_tr) && (y2 ?∉ fv_t) && (y2 ?∉ fv_T) && (y2 ?∉ fv_B) && (y2 ?∉ fv_context_Γ) && (y2 ?∉ Θ)
+       && (y1 ?<> p1) && (y2 ?<> p2)
        && (is_annotated_termb t) && (is_annotated_termb tl)
        && (is_annotated_termb tr)  && (is_annotated_typeb T)
 
@@ -421,12 +431,20 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     && (is_annotated_typeb U) && (is_annotated_typeb V)
 
   | N (TJ J_type_abs Θ _ (type_abs t) (T_abs T))
-      (( N ((TJ I1 (X::_) _ _ _) as j1) _ as d1) :: nil) =>
-    (j1 ?= (TJ I1 (X::Θ) Same (topen 0 t (fvar X type_var)) (topen 0 T (fvar X type_var)))) && (is_valid d1 Γ)
-     && (X ?∉ (pfv_context Γ term_var)) && (X ?∉ (pfv_context Γ type_var))
-     && (X ?∉ (pfv t term_var)) && (X ?∉ (pfv T term_var)) && (X ?∉ (pfv T type_var)) && (X ?∉ Θ)
-     && ((fv t) ?⊂ (support Γ)) && ((fv T) ?⊂ (support Γ))
-     && (is_annotated_typeb T) && (is_annotated_termb t) && (wfb t 0) && (twfb t 1) && (twfb T 1)
+      (( N ((TJ I1 (X::_) _ t' _) as j1) _ as d1) :: nil) =>
+    (j1 ?= (TJ I1 (X::Θ) Same t' (topen 0 T (fvar X type_var)))) && (is_valid d1 Γ)
+    && ((tree_eq t' (topen 0 t (fvar X type_var))) || (tree_eq t' (type_inst (type_abs t) (fvar X type_var))))
+    && (X ?∉ (pfv_context Γ term_var)) && (X ?∉ (pfv_context Γ type_var))
+    && (X ?∉ (pfv t term_var)) && (X ?∉ (pfv T term_var)) && (X ?∉ (pfv T type_var)) && (X ?∉ Θ)
+    && ((fv t) ?⊂ (support Γ)) && ((fv T) ?⊂ (support Γ))
+    && (is_annotated_typeb T) && (is_annotated_termb t) && (wfb t 0) && (twfb t 1) && (twfb T 1)
+
+  (* Subtyping inference *)
+  | N (TJ J_sub Θ _ t T2)
+      (( N ((TJ I1 _ _ _ T1) as j1) _ as d1)
+         :: ( N ((StJ I2 _ _ _ _) as j2) _ as d2):: nil) =>
+    (j1 ?= (TJ I1 Θ Same t T1)) && (is_valid d1 Γ)
+    && (j2 ?= (StJ I2 Θ Same T1 T2)) && (is_valid d2 Γ)
 
 
   (* EQUIVALENCE JUDGMENTS *)
@@ -494,7 +512,35 @@ Fixpoint is_valid(dv: derivation) (Γ: context) : bool :=
     (List.forallb (fun ds => is_valid ds Γ) c) && (wfb t1 0) && (wfb t2 0)
     && ((fv t1) ?⊂ (support Γ)) && ((fv t2) ?⊂ (support Γ))
 
+
+  (* Subtyping JUDGMENTS *)
+
+  | N (StJ S_refl Θ _ T1 T2) nil =>
+    (tree_eq T1 T2) && (wfb T1 0) && ((fv T1) ?⊂ (support Γ))
+  | N (StJ S_refine_drop Θ _ (T_refine T1 P) T2)
+      (( N ((StJ I1 _ _ _ _) as j1) _ as d1) :: nil) =>
+    (j1 ?= (StJ I1 Θ Same T1 T2)) && (is_valid d1 Γ)
+    && (wfb P 1) && ((fv P) ?⊂ (support Γ))
+
+  (* Base cases *)
+  | N (StJ S_bot Θ _ T_bot T) nil =>
+    (wfb T 0) && ((fv T) ?⊂ (support Γ))
+  | N (StJ S_top Θ _ T T_top) nil =>
+    (wfb T 0) && ((fv T) ?⊂ (support Γ))
+
+  (* Pi Type (arrow) *)
+  | N (StJ S_Pi Θ _ (T_arrow A1 A2) (T_arrow B1 B2))
+      (( N ((StJ I1 _ _ _ _) as j1) _ as d1)
+         :: ( N ((StJ I2 _ (Append [(x,_)]) _ _) as j2) _ as d2) :: nil) =>
+    (j1 ?= (StJ I1 Θ Same B1 A1)) && (is_valid d1 Γ)
+    && (j2 ?= (StJ I2 Θ (Append [(x, B1)]) (open 0 A2 (fvar x term_var)) (open 0 B2 (fvar x term_var))))
+    && (is_valid d2 ((x,B1)::Γ))
+    && (is_annotated_typeb A2) && (is_annotated_typeb B2) && (x ?∉ Θ)
+    && (x ?∉ (fv A2)) && (x ?∉ (fv B1)) && (x ?∉ (fv B2)) && (x ?∉ (fv_context Γ))
+
   | _ => false
+
+
   end.
 
 

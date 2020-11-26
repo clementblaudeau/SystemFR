@@ -27,6 +27,29 @@ Proof.
   rewrite erase_term_topen in *; steps.
 Qed.
 
+Lemma annotated_reducible_type_abs2:
+  forall Θ Γ t T X,
+    ~(X ∈ pfv_context Γ term_var) ->
+    ~(X ∈ pfv_context Γ type_var) ->
+    ~(X ∈ pfv t term_var) ->
+    ~(X ∈ pfv T term_var) ->
+    ~(X ∈ pfv T type_var) ->
+    ~(X ∈ Θ) ->
+    subset (fv t) (support Γ) ->
+    subset (fv T) (support Γ) ->
+    wf t 0 ->
+    twf t 1 ->
+    twf T 1 ->
+    is_annotated_term t ->
+    is_annotated_type T ->
+    [[ X :: Θ; Γ ⊨ type_inst (type_abs t) (fvar X type_var) : topen 0 T (fvar X type_var) ]] ->
+    [[ Θ; Γ ⊨ type_abs t : T_abs T ]].
+Proof.
+  intros. steps.
+  apply open_reducible_type_abs with X; side_conditions;
+  repeat steps || rewrite erase_type_topen in * by steps || rewrite erase_term_topen in *.
+Qed.
+
 Lemma annotated_reducible_type_inst:
   forall Θ Γ t U V,
     is_annotated_type U ->

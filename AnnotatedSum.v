@@ -19,24 +19,37 @@ Proof.
 Qed.
 
 Lemma annotated_reducible_sum_match:
-  forall Θ Γ t tl tr A B T y p,
-    ~(p ∈ fv tl) ->
-    ~(p ∈ fv tr) ->
-    ~(p ∈ fv t) ->
-    ~(p ∈ fv T) ->
-    ~(p ∈ fv A) ->
-    ~(p ∈ fv B) ->
-    ~(p ∈ fv_context Γ) ->
-    ~(y ∈ fv tl) ->
-    ~(y ∈ fv tr) ->
-    ~(y ∈ fv t) ->
-    ~(y ∈ fv T) ->
-    ~(y ∈ fv A) ->
-    ~(y ∈ fv B) ->
-    ~(y ∈ fv_context Γ) ->
-    ~(y = p) ->
-    ~(y ∈ Θ) ->
-    ~(p ∈ Θ) ->
+  forall Θ Γ t tl tr A B T y1 y2 p1 p2,
+    ~(p1 ∈ fv tl) ->
+    ~(p1 ∈ fv t) ->
+    ~(p1 ∈ fv T) ->
+    ~(p1 ∈ fv A) ->
+    ~(p1 ∈ fv_context Γ) ->
+    ~(p1 ∈ Θ) ->
+
+    ~(p2 ∈ fv tr) ->
+    ~(p2 ∈ fv t) ->
+    ~(p2 ∈ fv T) ->
+    ~(p2 ∈ fv B) ->
+    ~(p2 ∈ fv_context Γ) ->
+    ~(p2 ∈ Θ) ->
+
+    ~(y1 ∈ fv tl) ->
+    ~(y1 ∈ fv t) ->
+    ~(y1 ∈ fv T) ->
+    ~(y1 ∈ fv A) ->
+    ~(y1 ∈ fv_context Γ) ->
+    ~(y1 = p1) ->
+    ~(y1 ∈ Θ) ->
+
+    ~(y2 ∈ fv tr) ->
+    ~(y2 ∈ fv B) ->
+    ~(y2 ∈ fv t) ->
+    ~(y2 ∈ fv T) ->
+    ~(y2 ∈ fv_context Γ) ->
+    ~(y2 = p2) ->
+    ~(y2 ∈ Θ) ->
+
     wf T 1 ->
     wf t 0 ->
     wf A 0 ->
@@ -55,19 +68,27 @@ Lemma annotated_reducible_sum_match:
     subset (fv T) (support Γ) ->
     [[ Θ; Γ ⊨ t : T_sum A B ]] ->
     [[
-      Θ; (p, T_equiv t (tleft (fvar y term_var))) :: (y, A) :: Γ ⊨
-        open 0 tl (fvar y term_var) :
-        open 0 T (tleft (fvar y term_var)) ]]
+      Θ; (p1, T_equiv t (tleft (fvar y1 term_var))) :: (y1, A) :: Γ ⊨
+        open 0 tl (fvar y1 term_var) :
+        open 0 T (tleft (fvar y1 term_var)) ]]
     ->
     [[
-      Θ; (p, T_equiv t (tright (fvar y term_var))) :: (y, B) :: Γ ⊨
-        open 0 tr (fvar y term_var) :
-        open 0 T (tright (fvar y term_var)) ]]
+      Θ; (p2, T_equiv t (tright (fvar y2 term_var))) :: (y2, B) :: Γ ⊨
+        open 0 tr (fvar y2 term_var) :
+        open 0 T (tright (fvar y2 term_var)) ]]
     ->
     [[ Θ; Γ ⊨ sum_match t tl tr : open 0 T t ]].
 Proof.
   repeat step || erase_open.
-  apply open_reducible_sum_match with (erase_type A) (erase_type B) y p;
+  apply open_reducible_sum_match with (erase_type A) (erase_type B) y1 y2 p1 p2;
     repeat step;
     side_conditions.
+Qed.
+
+Lemma annotated_reducible_T_sum:
+  forall Θ Γ t T1 T2,
+    [[Θ; Γ ⊨ sum_match t (tleft (lvar 0 term_var)) (tright (lvar 0 term_var)) : T_sum T1 T2]] ->
+    [[Θ; Γ ⊨ t : T_sum T1 T2]].
+Proof.
+  intros; eapply open_reducible_T_sum; steps.
 Qed.

@@ -23,9 +23,12 @@ Require Export SystemFR.DerivationHelpers.
 Require Export SystemFR.AnnotatedTop.
 Require Export SystemFR.AnnotatedRec.
 Require Export SystemFR.AnnotatedPolymorphism.
+Require Export SystemFR.AnnotatedSub.
+Require Export SystemFR.AnnotatedSubtypeRefine.
+Require Export SystemFR.AnnotatedSubtypeOrder.
+Require Export SystemFR.AnnotatedSubtypeArrow.
 
 Require Import Psatz.
-
 
 Hint Resolve annotated_reducible_true : deriv.
 Hint Resolve annotated_reducible_false: deriv.
@@ -51,7 +54,15 @@ Hint Resolve annotated_reducible_top_value: deriv.
 Hint Resolve annotated_reducible_fold2: deriv.
 Hint Resolve annotated_reducible_fold3: deriv.
 Hint Resolve annotated_reducible_type_inst: deriv.
+Hint Resolve annotated_reducible_type_abs2: deriv.
 Hint Resolve annotated_reducible_type_abs: deriv.
+Hint Resolve annotated_reducible_sub: deriv.
+Hint Resolve annotated_subtype_refine2: deriv.
+Hint Resolve annotated_subtype_top: deriv.
+Hint Resolve annotated_subtype_bot: deriv.
+Hint Resolve subtype_refl: deriv.
+Hint Resolve annotated_subtype_arrow: deriv.
+Hint Resolve annotated_reducible_T_sum: deriv.
 
 Hint Rewrite tree_eq_prop: deriv.
 Hint Rewrite is_nat_is_nat_value: deriv.
@@ -71,6 +82,7 @@ Inductive TJ_name :=
 | J_Lambda
 | J_Left | J_Right
 | J_SumMatch : tree -> TJ_name
+| J_SumType
 | J_Let : tree -> TJ_name
 | J_Var | J_VarWeaken
 | J_Fix
@@ -89,11 +101,18 @@ Inductive TJ_name :=
 | J_Fold
 | J_Fold2
 | J_type_app
-| J_type_abs.
+| J_type_abs
+| J_sub
+.
 
 
 Inductive StJ_name :=
-| StJ_sub.
+| S_refl
+| S_refine_drop
+| S_top
+| S_bot
+| S_Pi
+.
 
 Inductive EJ_name :=
 | E_trans
@@ -223,8 +242,7 @@ Defined.
 Lemma StJ_name_eq_dec: forall (x y: StJ_name), {x = y} + {x <> y}.
 Proof.
   intros.
-  destruct x, y.
-  decide equality.
+  destruct x, y; try (left; reflexivity); try (right; discriminate).
 Defined.
 Lemma EJ_name_eq_dec: forall (x y: EJ_name), {x = y} + {x <> y}.
 Proof.

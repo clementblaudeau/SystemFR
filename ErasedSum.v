@@ -48,7 +48,7 @@ Proof.
 Qed.
 
 Lemma open_reducible_sum_match:
-  forall Θ Γ t tl tr T1 T2 T y p,
+  forall Θ Γ t tl tr T1 T2 T y1 y2 p1 p2,
     subset (fv t) (support Γ) ->
     subset (fv tl) (support Γ) ->
     subset (fv tr) (support Γ) ->
@@ -61,33 +61,43 @@ Lemma open_reducible_sum_match:
     wf t 0 ->
     wf tr 1 ->
     wf tl 1 ->
-    ~(y ∈ fv_context Γ) ->
-    ~(y ∈ fv T) ->
-    ~(y ∈ fv T1) ->
-    ~(y ∈ fv T2) ->
-    ~(y ∈ pfv T term_var) ->
-    ~(p ∈ pfv_context Γ term_var) ->
-    ~(p ∈ pfv t term_var) ->
-    ~(p ∈ pfv T1 term_var) ->
-    ~(p ∈ pfv T2 term_var) ->
-    ~(p ∈ pfv T term_var) ->
-    ~(p = y) ->
+
+    ~(y1 ∈ fv_context Γ) ->
+    ~(y1 ∈ fv T) ->
+    ~(y1 ∈ fv T1) ->
+
+    ~(y2 ∈ fv_context Γ) ->
+    ~(y2 ∈ fv T) ->
+    ~(y2 ∈ fv T2) ->
+
+    ~(p1 ∈ pfv_context Γ term_var) ->
+    ~(p1 ∈ pfv t term_var) ->
+    ~(p1 ∈ pfv T1 term_var) ->
+    ~(p1 ∈ pfv T term_var) ->
+    ~(p1 = y1) ->
+
+    ~(p2 ∈ pfv_context Γ term_var) ->
+    ~(p2 ∈ pfv t term_var) ->
+    ~(p2 ∈ pfv T2 term_var) ->
+    ~(p2 ∈ pfv T term_var) ->
+    ~(p2 = y2) ->
+
     is_erased_term t ->
     is_erased_term tl ->
     is_erased_term tr ->
     is_erased_type T ->
     [ Θ; Γ ⊨ t : T_sum T1 T2 ] ->
-    [ Θ; (p, T_equiv t (tleft (fvar y term_var))) :: (y, T1) :: Γ ⊨
-        open 0 tl (fvar y term_var) : open 0 T (tleft (fvar y term_var)) ] ->
-    [ Θ; (p, T_equiv t (tright (fvar y term_var))) :: (y, T2) :: Γ ⊨
-        open 0 tr (fvar y term_var) : open 0 T (tright (fvar y term_var)) ] ->
+    [ Θ; (p1, T_equiv t (tleft (fvar y1 term_var))) :: (y1, T1) :: Γ ⊨
+        open 0 tl (fvar y1 term_var) : open 0 T (tleft (fvar y1 term_var)) ] ->
+    [ Θ; (p2, T_equiv t (tright (fvar y2 term_var))) :: (y2, T2) :: Γ ⊨
+        open 0 tr (fvar y2 term_var) : open 0 T (tright (fvar y2 term_var)) ] ->
     [ Θ; Γ ⊨ sum_match t tl tr : open 0 T t ].
 Proof.
   unfold open_reducible; repeat step || t_instantiate_sat3 || top_level_unfold reduces_to || simp_red || t_substitutions.
 
   - eapply reducibility_rtl; eauto; t_closer.
 
-    unshelve epose proof (H27 ρ ((p, uu) :: (y,v') :: lterms) _ _ _);
+    unshelve epose proof (H32 ρ ((p1, uu) :: (y1,v') :: lterms) _ _ _);
       repeat step || apply SatCons || list_utils || t_substitutions || simp_red ||
              t_values_info2 || t_deterministic_star;
       try solve [ equivalent_star ];
@@ -101,7 +111,7 @@ Proof.
 
   - eapply reducibility_rtl; eauto; t_closer.
 
-    unshelve epose proof (H28 ρ ((p, uu) :: (y,v') :: lterms) _ _ _);
+    unshelve epose proof (H33 ρ ((p2, uu) :: (y2,v') :: lterms) _ _ _);
       repeat step || apply SatCons || list_utils || t_substitutions || simp_red ||
              t_values_info2 || t_deterministic_star;
       try solve [ equivalent_star ];
@@ -112,4 +122,25 @@ Proof.
       repeat step || list_utils; t_closer.
     eapply backstep_reducible; eauto with smallstep;
       repeat step || list_utils; t_closer.
+Qed.
+
+
+Lemma reducible_T_sum:
+  forall ρ t T1 T2,
+    valid_interpretation ρ ->
+    [ρ ⊨ sum_match t (tleft (lvar 0 term_var)) (tright (lvar 0 term_var)) : T_sum T1 T2] ->
+    [ρ ⊨ t : T_sum T1 T2].
+Proof.
+  unfold reduces_to, closed_term; repeat steps || list_utils.
+  eapply_anywhere star_smallstep_sum_match_inv; steps; eauto with values; simpl in *;
+  exists v; steps; eauto using star_trans.
+Qed.
+
+Lemma open_reducible_T_sum:
+  forall Θ Γ t T1 T2,
+    [Θ; Γ ⊨ sum_match t (tleft (lvar 0 term_var)) (tright (lvar 0 term_var)) : T_sum T1 T2] ->
+    [Θ; Γ ⊨ t : T_sum T1 T2].
+Proof.
+  unfold open_reducible; steps;
+    eapply reducible_T_sum; steps.
 Qed.

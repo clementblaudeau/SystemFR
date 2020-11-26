@@ -210,12 +210,15 @@ Proof.
         apply (annotated_reducible_pi1 Θ Γ t A B)
       | H: [[?Θ; ?Γ ⊨ ?t : (T_prod ?A ?B)]] |- [[?Θ; ?Γ ⊨ _ (pi2 ?t) : _]] =>
         apply (annotated_reducible_pi2 Θ Γ t A B)
-      | H: _ |- [[?Θ; ?Γ ⊨ _ (pp ?t1 ?t2) : (T_prod ?A ?B)]] =>
+      | H: _ |- [[?Θ; ?Γ ⊨ (pp ?t1 ?t2) : (T_prod ?A ?B)]] =>
         eapply (annotated_reducible_pp Θ Γ A B t1 t2)
       | H: [[?Θ; ?Γ ⊨ ?t1 : (T_arrow ?U ?V)]] |- [[?Θ; ?Γ ⊨ (Trees.app ?t1 ?t2) : ?T]] =>
         apply (annotated_reducible_app Θ Γ t1 t2 U V)
-      | H: [[?Θ; ?Γ ⊨ ?t1 : (T_sum ?A ?B)]], H1: ?y <> ?p |- [[?Θ; ?Γ ⊨ (sum_match ?t1 ?t2 ?t3) : ?T]] =>
-        eapply (annotated_reducible_sum_match Θ Γ t1 t2 t3 A B _ y p)
+      | H: [[?Θ; ?Γ ⊨ ?t1 : (T_sum ?A ?B)]],
+           H1: [[_;((?p1,_)::(?y1,_)::_) ⊨ (open _ ?tl _):_]],
+               H2: [[_;((?p2,_)::(?y2,_)::_) ⊨ (open _ ?tr _):_]]
+        |- [[?Θ; ?Γ ⊨ (sum_match ?t ?tl ?tr) : ?T]] =>
+        eapply (annotated_reducible_sum_match Θ Γ t tl tr A B _ y1 y2 p1 p2)
       | H: _ |- [[?Θ; ?Γ ⊨ (lambda ?T ?t) : _]] =>
         eapply (annotated_reducible_lambda)
       | H: ?x <> ?p |- [[?Θ; ?Γ ⊨ (tlet ?t1 ?A ?t2) : _]] =>
@@ -267,8 +270,8 @@ Proof.
       |- [[ _;_ ⊨ tunfold_pos_in ?t1 ?t2 : ?T]] =>
       eapply (annnotated_reducible_unfold_pos_in _ _ t1 t2 n T0 Ts p1 y _); eauto
       end;
-    soundness_finish; eauto with deriv annotated_primitives].
-  eauto with deriv.
+    soundness_finish; eauto 2 with deriv annotated_primitives].
+
   assert (is_valid (N (EJ E_SMT Θ Same t T) c) Γ = true).
   cbn; repeat bools || steps || autorewrite with deriv; eauto.
   eauto using trustSMTSolver_ADMITTED.

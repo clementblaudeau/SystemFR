@@ -197,3 +197,39 @@ Proof.
     repeat step;
     eauto using is_erased_term_tclose.
 Qed.
+
+
+Lemma is_erased_type_term_close_aux:
+  forall T k x,
+    (is_erased_type T ->
+     is_erased_type (close k T x)) /\
+    (is_erased_term T ->
+     is_erased_term (close k T x)).
+Proof.
+  induction T; steps; eauto with erased;
+     repeat match goal with
+      | H: forall k x : nat, _ |- _ =>
+        pose proof (H k x);
+        pose proof (H (S k) x);
+        specialize (H (S (S k)) x)
+      end; steps.
+Qed.
+
+Lemma is_erased_type_close:
+  forall T k x,
+    is_erased_type T ->
+     is_erased_type (close k T x).
+Proof.
+  intros; pose proof is_erased_type_term_close_aux T k x; steps.
+Qed.
+
+Lemma is_erased_term_close:
+  forall T k x,
+    is_erased_term T ->
+     is_erased_term (close k T x).
+Proof.
+  intros; pose proof is_erased_type_term_close_aux T k x; steps.
+Qed.
+
+Hint Immediate is_erased_term_close: erased.
+Hint Immediate is_erased_type_close: erased.

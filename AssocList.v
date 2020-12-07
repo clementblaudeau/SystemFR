@@ -129,6 +129,16 @@ Qed.
 
 Hint Immediate lookupSomeSupport: blookup.
 
+Lemma lookupSomeSupport2:
+  forall X Y eq_dec (m: map X Y) x,
+    x ∈ support m ->
+    exists A, lookup eq_dec m x = Some A.
+Proof.
+  induction m; repeat step || unfold fv_context in * || sets; eauto.
+Qed.
+
+Hint Immediate lookupSomeSupport2: blookup.
+
 Lemma lookupRange:
   forall X Y eq_dec (m: map X Y) x y,
     lookup eq_dec m x = Some y ->

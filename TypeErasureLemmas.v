@@ -232,3 +232,21 @@ Proof.
 Qed.
 
 Hint Resolve erase_cbv_value: values.
+
+
+Lemma erase_term_close:
+  forall T k x,
+    erase_term (close k T x) = close k (erase_term T) x.
+Proof.
+  induction T; steps.
+Qed.
+
+Lemma erase_type_close:
+  forall T k x,
+    erase_type (close k T x) = close k (erase_type T) x.
+Proof.
+  induction T; repeat steps || rewrite erase_term_close in *.
+Qed.
+
+Hint Rewrite erase_term_close: erased.
+Hint Rewrite erase_type_close: erased.

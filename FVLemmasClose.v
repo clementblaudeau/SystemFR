@@ -90,3 +90,14 @@ Proof.
   induction t;
     repeat step || list_utils.
 Qed.
+
+
+Lemma fv_close_subset:
+  forall T x k,
+    subset (fv (close k T x)) (fv T).
+Proof.
+  induction T;
+    repeat steps || list_utils.
+  all: eauto using subset_nil, subset_transitive, subset_union.
+Qed.
+Hint Resolve fv_close_subset: fv.

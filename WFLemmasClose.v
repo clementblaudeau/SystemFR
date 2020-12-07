@@ -20,6 +20,15 @@ Proof.
   induction t; steps.
 Qed.
 
+Lemma wf_close2:
+  forall T x y k,
+    y < k ->
+    wf T k ->
+    wf (close y T x) k.
+Proof.
+  induction T; steps; try eapply_any; eauto; lia.
+Qed.
+
 Lemma wf_tclose:
   forall t i j x,
     wf t i ->
@@ -45,6 +54,7 @@ Proof.
 Qed.
 
 Hint Resolve wf_close: wf.
+Hint Resolve wf_close2: wf.
 Hint Resolve twf_tclose: twf.
 Hint Resolve wf_tclose: wf.
 Hint Resolve twf_close: twf.

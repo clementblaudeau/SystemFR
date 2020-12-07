@@ -72,6 +72,7 @@ Proof.
   intros; eapply satisfies_lookup; eauto.
 Qed.
 
+
 Lemma satisfies_same_support:
   forall P Γ lterms,
     satisfies P Γ lterms ->
@@ -81,6 +82,27 @@ Proof.
 Qed.
 
 Hint Immediate satisfies_same_support: btermlist.
+
+
+Lemma satisfies_lookup3:
+  forall P Γ lterms x T,
+    satisfies P Γ lterms ->
+    lookup PeanoNat.Nat.eq_dec Γ x = Some T ->
+    exists t,
+      lookup PeanoNat.Nat.eq_dec lterms x = Some t /\
+      P t (substitute T lterms).
+Proof.
+  intros.
+  pose proof (satisfies_same_support _ _ _ H).
+  pose proof (lookupSomeSupport _ _ _ _ _ _ H0).
+  rewrite H1 in H2.
+  pose proof (lookupSomeSupport2 _ _ Nat.eq_dec _ _ H2).
+  steps; exists A; steps.
+  apply (satisfies_lookup2 _ _ _ _ _ _ H H0 H3).
+Qed.
+
+
+
 
 Ltac t_instantiate_sat :=
   match goal with
@@ -206,4 +228,3 @@ Proof.
 Qed.
 
 Hint Immediate satisfies_y_in_support: fv.
-

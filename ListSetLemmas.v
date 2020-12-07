@@ -12,6 +12,13 @@ Qed.
 
 Hint Resolve in_subset: sets.
 
+Lemma subset_nil : forall {T} A, @subset T nil A.
+Proof.
+  steps. eauto with sets.
+Qed.
+Hint Resolve subset_nil: sets.
+
+
 Lemma singleton_subset:
   forall {T} (l: list T) (x: T),
     subset (singleton x) l <->

@@ -116,3 +116,42 @@ Ltac t_annotated_open :=
       poseNew (Mark 0 "once");
       apply annotated_topen with k rep
   end.
+
+
+
+Lemma annotated_type_term_close_aux:
+  forall T x k,
+    (is_annotated_type T ->
+     is_annotated_type (close x T k)) /\
+    (is_annotated_term T ->
+     is_annotated_term (close x T k)).
+Proof.
+  induction T; steps;
+     repeat match goal with
+      | H: forall k x : nat, _ |- _ =>
+        pose proof (H k x);
+        pose proof (H (S k) x);
+        specialize (H (S (S k)) x)
+            end; steps.
+Qed.
+
+Lemma annotated_term_close:
+  forall T x k,
+    is_annotated_term T ->
+    is_annotated_term (close x T k).
+Proof.
+  intros. apply annotated_type_term_close_aux; assumption.
+Qed.
+
+
+Lemma annotated_type_close:
+  forall T x k,
+    is_annotated_type T ->
+    is_annotated_type (close x T k).
+Proof.
+  intros. apply annotated_type_term_close_aux; assumption.
+Qed.
+
+
+Hint Resolve annotated_term_close: annot.
+Hint Resolve annotated_type_close: annot.

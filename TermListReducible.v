@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 
 Require Export SystemFR.TreeLists.
 Require Export SystemFR.ReducibilityLemmas.
+Require Export SystemFR.SubstitutionErase.
 
 Opaque reducible_values.
 
@@ -14,7 +15,6 @@ Proof.
   induction l; repeat step || step_inversion satisfies;
     eauto with erased.
 Qed.
-
 Hint Immediate satisfies_erased_terms: erased.
 
 Lemma satisfies_weaken:

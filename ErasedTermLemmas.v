@@ -76,6 +76,20 @@ Proof.
   induction t; steps; eauto.
 Qed.
 
+Hint Resolve is_erased_open2: erased.
+
+
+Lemma is_erased_type_open_fvar:
+  forall T i x,
+    is_erased_type (open i T (fvar x term_var)) ->
+    is_erased_type T.
+Proof.
+  induction T; steps; eauto with erased.
+Qed.
+
+Hint Immediate is_erased_type_open_fvar: erased.
+
+
 Lemma is_erased_term_tfv:
   forall t,
     is_erased_term t ->

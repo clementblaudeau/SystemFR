@@ -132,6 +132,20 @@ Proof.
   unfold subset; repeat step || fv_open.
 Qed.
 
+Lemma fv_open3:
+  forall t1 t2 tag k A,
+    subset (pfv (open k t1 t2) tag) A ->
+    subset (pfv t1 tag) A.
+Proof.
+  induction t1;
+    repeat steps || match goal with | H: subset (_ ++ _) _ |- _ => apply subset_union3 in H end;
+    eauto with sets ; apply subset_union2; eauto with eapply_any sets.
+Qed.
+
+Hint Resolve fv_open3: fv sets.
+
+
+
 Lemma fv_topen:
   forall t rep k tag,
     subset (pfv (topen k t rep) tag) (pfv t tag ++ pfv rep tag).

@@ -311,6 +311,21 @@ Proof.
   intros; eapply reducibility_open_equivalent_aux; eauto using equivalent_sym.
 Qed.
 
+Lemma reducibility_open_equivalent2:
+  forall T t1 t2 ρ t,
+    [ ρ ⊨ t : open 0 T t1 ] ->
+    valid_interpretation ρ ->
+    is_erased_type T ->
+    wf T 1 ->
+    pfv T term_var = nil ->
+    [ t1 ≡ t2 ] ->
+    [ ρ ⊨ t : open 0 T t2 ].
+Proof.
+  unfold reduces_to; steps.
+  exists v; steps.
+    eapply reducibility_open_equivalent_aux; eauto using equivalent_sym.
+Qed.
+
 Lemma reducibility_values_ltr:
   forall T t1 t2 ρ v,
     [ ρ ⊨ v : open 0 T t1 ]v ->

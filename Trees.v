@@ -112,6 +112,12 @@ Proof.
   steps.
 Qed.
 
+Lemma tree_neq_prop : forall t1 t2, (tree_eq t1 t2 = false) <-> t1 <> t2.
+Proof.
+  unfold tree_eq.
+  steps.
+Qed.
+
 (* types defined in terms out of the previous types *)
 Definition intersect T0 Ts := T_forall T_nat (T_rec (lvar 0 term_var) T0 Ts).
 
